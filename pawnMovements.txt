@@ -1,0 +1,5 @@
+Pawn Movements are weirder than the other pieces because:
+- not sliding (rook, bishop, queen)
+- not like a knight (jumps) or a king ( 1 sq)
+- most dynamic move rules based off scenario
+    *single vs double push

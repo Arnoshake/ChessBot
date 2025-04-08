@@ -4,7 +4,6 @@
 #include <bitset>  //included for decimal to binary conversion
 #include <sstream> //included for move print
 #include <cstdint>
-#include "sandbox.cpp"
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
     a2 = 8,  b2,  c2,  d2,  e2,  f2,  g2,  h2,
@@ -154,6 +153,9 @@ public:
         uint64_t possibleMoves = ( pieceMask & (~friendlyOccupied) ); //removes the ability to capture friendly pieces
     }
     //1 billion helper and bool methods
+    bool isWhiteTurn(){
+        return (gameTurn == 1);
+    }
     bool isWhitePiece(int square)
     {
         return ((whitePieces) & (1ULL << square)) != 0;

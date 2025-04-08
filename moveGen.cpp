@@ -4,7 +4,7 @@
 #include <bitset>  //included for decimal to binary conversion
 #include <sstream> //included for move print
 #include <cstdint>
-
+#include "chessGameCurrent.cpp"
 #include <fstream> //included to write to output file
 //included because I think in terms of squares... not indexes!
 enum Square {
@@ -16,6 +16,11 @@ enum Square {
     a6 = 40, b6,  c6,  d6,  e6,  f6,  g6,  h6,
     a7 = 48, b7,  c7,  d7,  e7,  f7,  g7,  h7,
     a8 = 56, b8,  c8,  d8,  e8,  f8,  g8,  h8
+};
+enum class PieceType {
+    P, N, B, R, Q, K, // 0-5 White
+    p, n, b, r, q, k, // 6-11 Black
+    b //12 empty
 };
 //MY CODE!!
 void printBitBoard(uint64_t board){
@@ -39,6 +44,7 @@ void printBitBoard(uint64_t board){
     }
     std::cout << std::endl;
 }
+//MOVEMENT MASKS (w/o pieces)
 uint64_t getRookMask(int square){
 
     int targetRank = square / 8; //rows
@@ -273,6 +279,10 @@ uint64_t getBishopMask(int square){
         return bishopAttacks;
         */
 }
+uint64_t getQueenMask(int square){
+    return ( (getBishopMask(square) | (getRookMask(square)) ));
+}
+
 uint64_t getKnightMask(int square){
     //prevents leftside overflow
     uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
@@ -381,6 +391,129 @@ uint64_t getPawnCaptures(int square, int side){
     }
     return pawnCaptures;
 }
+uint64_t getRelevantMoveMask(int fromSquare, char pieceType, Board state ){
+    // Completed on 4/7/25
+    // returns the relevant map for a given square.
+    init_sliders_attacks(1); //for bishops
+    init_sliders_attacks(0); //for rooks
+
+    pieceType = tolower(pieceType);
+    uint64_t possibleMoves = 0x0000000000000000ULL;
+
+    uint64_t occupiedSquares = state.getOccupiedSquares();
+    uint64_t friendlyOccupiedSquares;
+    uint64_t enemyOccupiedSquares;
+    if (state.isWhiteTurn()){
+        friendlyOccupiedSquares = state.getWhitePieces();
+        enemyOccupiedSquares = state.getBlackPieces();
+
+    }
+    else{
+        friendlyOccupiedSquares = state.getBlackPieces();
+        enemyOccupiedSquares = state.getWhitePieces();
+    }
+
+    switch(pieceType){
+        //NEED TO DO PAWN AND KING BECAUSE THEIR MOVES DEPEND ON OCCUPIED
+        case 'p': //pawn
+            possibleMoves = getPawnMask(fromSquare, state.isWhiteTurn());
+            possibleMoves &= ~occupiedSquares; //only keeps possible moves not blocked by existing
+            
+            uint64_t possibleCaptures = getPawnCaptures(fromSquare, state.isWhiteTurn());
+            possibleCaptures &= enemyOccupiedSquares;
+
+            possibleMoves |= possibleCaptures;
+            break;
+            
+        case 'k': //king
+            possibleMoves = getKingMask(fromSquare);
+            possibleMoves &= ~friendlyOccupiedSquares;
+            break;
+        case 'n': //knight
+            possibleMoves = getKnightMask(fromSquare);
+            possibleMoves &= ~friendlyOccupiedSquares;
+            break;
+        case 'r': //rook
+            possibleMoves = get_rook_attacks(fromSquare, occupiedSquares );
+            possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
+            break;
+        case 'b': //bishop
+            possibleMoves = get_bishop_attacks(fromSquare, occupiedSquares );
+            possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
+            break;
+        case 'q': //queen
+            possibleMoves = ( getRookMask(fromSquare) | getBishopMask(fromSquare) );  //all possible directional moves
+            possibleMoves &= ~friendlyOccupiedSquares;
+            break;
+        
+    }
+}
+
+bool isSet(uint64_t bitboard, int square){
+    return (bitboard & (1ULL << square) ) != 0 ;
+}
+uint64_t generateRookMovesBitBoard(uint64_t rookBitboard, uint64_t occupiedSquares){
+    uint64_t rookMovesBoard = 0ULL;
+    for (int sq = 0; sq < 64 ; sq ++){
+        if (isSet(rookBitboard,sq)){
+            rookMovesBoard |= get_rook_attacks(sq,occupiedSquares);
+        }
+    }
+    return rookMovesBoard;
+}
+uint64_t generateBishopMovesBitBoard(uint64_t bishopBitboard, uint64_t occupiedSquares){
+    uint64_t bishopMovesBoard = 0ULL;
+    for (int sq = 0; sq < 64 ; sq ++){
+        if (isSet(bishopBitboard,sq)){
+            bishopMovesBoard |= get_bishop_attacks(sq,occupiedSquares);
+        }
+    }
+    return bishopMovesBoard;
+}
+uint64_t generateQueenMovesBitBoard(uint64_t queenBitboard, uint64_t occupiedSquares){
+    uint64_t queenMovesBoard = 0ULL;
+    queenMovesBoard = generateBishopMovesBitBoard(queenBitboard, occupiedSquares) | generateRookMovesBitBoard(queenBitboard, occupiedSquares);
+    return queenMovesBoard;
+}
+uint64_t generateKnightMovesBitBoard(uint64_t knightBitBoard, uint64_t occupiedSquares){
+    uint64_t knightMovesBoard = 0ULL;
+    for (int sq = 0; sq < 64 ; sq ++){
+        if (isSet(knightBitBoard,sq)){
+            knightMovesBoard |= getKnightMask(sq);
+        }
+    }
+    return knightMovesBoard;
+}
+//Are my sliding pieces calling the right function? Need to makes sure that it excludes friendly pieces from capture... Might need to call getRelevantMoveMask
+uint64_t possibleMovesOfPieceGivenBoard(int square, char pieceType, Board state){ //WORK ON!!!!!!!
+    uint64_t whitePieces = state.getWhitePieces();
+    uint64_t blackPieces = state.getBlackPieces();
+    uint64_t occupiedSquares = state.getOccupiedSquares();
+    uint64_t emptySquares = ~occupiedSquares;
+    bool isWhiteTurn = state.isWhiteTurn();
+
+    uint64_t pieceMask = getRelevantMoveMask(square, pieceType, state);
+    
+    //KING LOGIC... need a getKingSquare(color) method...
+    uint64_t possibleMoves;
+    //king possibleMove Generation
+    if (state.isWhiteTurn() && pieceType == 'K'){
+       return (pieceMask & ~(generateBishopMovesBitBoard(state.getBlackBishop(), occupiedSquares ) | generateRookMovesBitBoard(state.getBlackRook(), occupiedSquares) | (state.getBlackKnight(), occupiedSquares) | generateQueenMovesBitBoard(state.getBlackQueen(),occupiedSquares ) | generatePawnMovesBitBoard() ));  //can move to the intersection of moveMask and notCheck Squares
+    }
+    else if (state.isWhiteTurn() && pieceType == 'k'){ //black
+        return (pieceMask & ~(generateBishopMovesBitBoard(state.getWhiteBishop(), occupiedSquares ) | generateRookMovesBitBoard(state.getWhiteRook(), occupiedSquares) | (state.getWhiteKnight(), occupiedSquares) | generateQueenMovesBitBoard(state.getWhiteQueen(),occupiedSquares ) | generatePawnMovesBitBoard() ));  //can move to the intersection of moveMask and notCheck Squares
+    }
+    
+    
+
+
+}
+
+
+
+
+
+
 
 /*
 BELOW IS NOT MY CODE!

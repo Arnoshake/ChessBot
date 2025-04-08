@@ -1,0 +1,165 @@
+ChessGame::MoveInformation ChessGame::handleInput(){
+    bool invalid = false; //this will be raised if the input does not match the confines of notation
+    /*
+        Input is entirely seperate from making a move --> Brandon Note
+        making a move has all the following information (parsing needs to identify...):
+    */
+
+    /*
+        This code was written by a human. Chess notation was researched through the wikepedia and summarized in ChatGPT
+        February 21st, 2025 - Zachary West | 2.75 hours spent
+
+        Initial code did not work as it incorrectly identified to and from squares due to condense notation of moves like Ke2
+
+        Flow of Logic for Chess Notation:
+
+        1. The piece involved will always be declared, actively or passively(pawn)
+        2. IF ambigious, the From identifier will be present
+        3. IF capture, the capture notation is next
+        4. the To information will always be present
+        5. is this a promotion?
+            If so, what to?
+        6. Is this check or mate?
+
+        alternative move available is castling (O-O or O-O-O) not 0's...
+    */
+
+    std::string lineArg;
+    std::getline(std::cin, lineArg);
+
+    int lineIndex = 0;
+    int notationLength = lineArg.length();
+
+    bool isKingCastle; // O-O
+    bool isQueenCastle; //O-O-O
+    if (lineArg[0] == 'O' && notationLength == 3){
+        isKingCastle = true;
+    }
+    else if (lineArg[0] == 'O' && notationLength > 3){
+        isQueenCastle = true;
+        isKingCastle = false;
+        if (lineArg[notationLength-1] == '+');
+        if (lineArg[notationLength-1] == '#' );
+    
+
+    }
+    
+
+    char pieceType;
+// 1. Determine the piece being moved (pawns are implied) --> FIX ME, 'G' = pawn ... ?
+    if (lineArg[0] == 'K' || lineArg[0] == 'Q' || lineArg[0] == 'N' || lineArg[0] == 'B' || lineArg[0] == 'R' ){
+        pieceType = lineArg[0];
+        lineIndex++;
+    }
+    else{
+        pieceType = 'P';
+        //since pawns are implied by absence, the rest starts at 0 instead of index 1
+        //assign pawn type at the END of the code as pawn recognition condition actually is:
+            //valid chess notation without a piece
+    }
+    
+    bool invalidFormat = false;
+// 2. Determine ambiguity
+    int ranks = 0; //a-h
+    int files = 0; //1-8
+    for (int i = 0; i < notationLength ; i++){
+        if (lineArg[i] >= 49 && lineArg[i] <= 56){ //1 - 8
+            files++;
+        }
+        if (lineArg[i] >= 97 && lineArg[i] <= 104){ //lowercase a - h
+            ranks++;
+        }
+    }
+    bool isAmbiguous = false;
+    if (ranks > 1 || files > 1){
+        isAmbiguous = true;
+    }
+
+    if (ranks > 2 || files > 2){ 
+        invalidFormat = true;
+    }
+    char fromRank;
+    char fromFile;
+    //if its ambiguous, then you know the index after piece MUST declare file or rank
+    if (isAmbiguous){
+        if (ranks == 2) fromRank = lineArg[lineIndex];
+        else{ 
+            fromFile = lineArg[lineIndex];
+        }
+        lineIndex++;
+    }
+// 3. Determine if the move is a capture --> INCREMENT IN FINDING X
+    bool isCapture;
+    if (lineArg.find('x') == std::string::npos){ //this is more guaranteed but is outside the logic of checking value at square
+        isCapture = false;
+    }
+    else{
+        isCapture = true;
+        lineIndex++;
+    }
+// 4. Record the To information
+    char toRank;
+    char toFile;
+    toRank = lineArg[lineIndex++];
+    toFile = lineArg[lineIndex++];
+// 5. Determine Promotion
+    bool isPromotion;
+    char promotionPiece;
+    if (lineArg[lineIndex] == '='){
+        isPromotion = true;
+        lineIndex++;
+        //given a promotion is occuring, what is the new promoted piece?
+        if (lineArg[lineIndex] == 'Q' || lineArg[lineIndex] == 'N' || lineArg[lineIndex] == 'B' || lineArg[lineIndex] == 'R' ){
+            promotionPiece = lineArg[lineIndex];
+            lineIndex++;
+        }
+        else{
+        //a piece must promot to one of those options, any other input is wrong.
+        invalid = true;
+        }
+    }
+// 6. Determine Checkmate
+    bool isCheck,isCheckMate;
+    if (lineArg[notationLength-1] == '+'){
+        isCheck = true;
+    }
+    else if (lineArg[notationLength-1] == '#'){
+    isCheckMate = true;
+    }
+
+
+
+
+
+
+    
+
+
+    //FROM SQUARE LOGIC IS FUCKED
+    /*
+    char fromRank; //lowercase letter
+    char fromFile; //lowercase # 
+
+    if (lineArg[lineIndex] >= 48 && lineArg[lineIndex] <=56){
+        fromRank = lineArg[lineIndex];
+        lineIndex++;
+    }
+    else if (lineArg[lineIndex] >= 97 && lineArg[lineIndex] <= 104){
+        fromFile = lineArg[lineIndex];
+        lineIndex++;
+    }
+    */
+    
+    //the TO square information is guaranteed to be present, no potential for changing
+
+    
+    
+    
+    //check or mate is always the last symbol
+
+
+    MoveInformation move;
+    
+
+    
+}

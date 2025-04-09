@@ -3,3 +3,8 @@ Pawn Movements are weirder than the other pieces because:
 - not like a knight (jumps) or a king ( 1 sq)
 - most dynamic move rules based off scenario
     *single vs double push
+    *en Passant
+        White pawns on 5th rank // Black pawns on 4th rank
+        PREVIOUS move must be double pawn push to adjacent rank square
+
+

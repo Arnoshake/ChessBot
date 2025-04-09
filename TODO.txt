@@ -1,3 +1,7 @@
 MOVE GENERATION:
 MAKE PAWN STRUCTURE AND POSSIBLE MOVES
+
+
+
+
 Scale fromPiece methods to bitboards

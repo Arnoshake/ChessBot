@@ -27,4 +27,4 @@ Need to:
 - Now have completed move generation for rooks, bishops, queens, Knights, and King
 
 - got working pawn movement for push, double push, and captures
-    - Need to work on en passant and promotions
+    - Need to work on en passant and promotions 

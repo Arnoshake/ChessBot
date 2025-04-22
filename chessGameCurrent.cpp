@@ -14,7 +14,13 @@ enum Square {
     a7 = 48, b7,  c7,  d7,  e7,  f7,  g7,  h7,
     a8 = 56, b8,  c8,  d8,  e8,  f8,  g8,  h8
 };
-
+enum Color {
+    black = 0, white = 1
+};
+enum Piece {
+    none , pawn, bishop, knight, rook, queen, king
+    
+};
 /*
 BELOW IS NOT MY CODE!
 
@@ -171,6 +177,67 @@ int rook_rellevant_bits[64] = {
     12, 11, 11, 11, 11, 11, 11, 12
 };
 // bishop rellevant occupancy bits
+
+uint64_t getRookMask(int square){
+
+    int targetRank = square / 8; //rows
+    int targetFile = square % 8; //columns
+
+    uint64_t rookAttacks = 0ULL;
+
+    /*
+        For loop syntax explanation:
+            the rank and file are initialized to the first nonSelf tile for each cardinal direction (pieces cannot move to themselves)
+            the loop will iterate until it reaches the 2nd to most outward square. This is important for masking with magic bitboards later
+            the condition will update so that it then progresses further in the relevant cardinal direction 
+    */
+    for (int rank = targetRank + 1; rank <= 6; rank++) rookAttacks |= (1ULL << (8*rank + targetFile) ); //up
+    for (int rank = targetRank - 1; rank >= 1 ; rank--) rookAttacks |= (1ULL << (8*rank + targetFile) ); //down
+    
+    for (int file = targetFile + 1; file <= 6 ; file++) rookAttacks |= (1ULL << (8*targetRank + file) ); //right
+    for (int file = targetFile - 1; file >= 1 ; file--) rookAttacks |= (1ULL << (8*targetRank + file) ); //left
+    return rookAttacks;
+
+
+
+
+
+    
+        return rookAttacks;
+}
+uint64_t getBishopMask(int square){
+    int targetRank = square / 8; //rows
+    int targetFile = square % 8; //columns
+    uint64_t bishopAttacks = 0ULL;
+
+    /*
+        For loop syntax explanation:
+            the rank and file are initialized to the first nonSelf tile for each cardinal direction (pieces cannot move to themselves)
+            the loop will iterate until it reaches the 2nd to most outward square. This is important for masking with magic bitboards later
+            the condition will update so that it then progresses further in the relevant cardinal direction 
+    */
+    for (int rank = targetRank + 1, file = targetFile + 1; rank <= 6 && file <= 6; rank++, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // NE
+    for (int rank = targetRank + 1, file = targetFile + -1; rank <= 6 && file >= 1; rank++, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // NW
+    
+    for (int rank = targetRank - 1, file = targetFile + 1; rank >= 1 && file <= 6; rank--, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // SE
+    for (int rank = targetRank - 1, file = targetFile - 1; rank >= 1 && file >= 1; rank--, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // SW
+    return bishopAttacks;
+
+
+
+
+
+
+
+
+
+
+    
+}
+
+
+
+
 int bishop_rellevant_bits[64] = {
     6, 5, 5, 5, 5, 5, 5, 6,
     5, 5, 5, 5, 5, 5, 5, 5,
@@ -381,8 +448,7 @@ void init_sliders_attacks(int is_bishop)
 bool isSet(uint64_t bitboard, int square){
     return (bitboard & (1ULL << square) ) != 0 ;
 }
-class Board
-{
+class Board{
 private:
     
     // White pieces
@@ -406,25 +472,16 @@ private:
     // Occupied squares (both white and black pieces)
     uint64_t occupiedSquares;
     uint64_t emptySquares;
-    // handleInput
-    std::string playerMove;
 
-    // properNotation
-    std::string originSq;
-    std::string action;
-    std::string destinationSq;
-    std::string moveAttribute;
 
     // 1= white, -1 = black
-    int gameTurn;
+    int isWhiteTurn;
 
 public:
-    Board();
-
-    void initializeBoard()
-    {                                       // Initialize the chess board with pieces | LSB = 1a-1d, MSB = 8a-8d
+    Board(){
         whitePawns = 0x000000000000FF00ULL; // every digit = 4 bits (squares on the board). In hexa, F = 1111, so the 2nd row's entirely set to 1 for pawns
         blackPawns = 0x00FF000000000000ULL; // 00000000 11111111 000000000
+        
         whiteRooks = 0x0000000000000081ULL;
         blackRooks = 0x8100000000000000ULL; // 10000001 00000000 000000000 1010 = A
 
@@ -444,154 +501,41 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
+        isWhiteTurn = 1;
     };
 
-/*
-    uint64_t generateRookMoves(uint64_t rookBitboard, uint64_t occupiedSquares){ 
-    uint64_t rookMovesBoard = 0ULL;
-    for (int sq = 0; sq < 64 ; sq ++){
-        if (isSet(rookBitboard,sq)){
-            rookMovesBoard |= get_rook_attacks(sq,occupiedSquares);
-        }
-    }
-    return rookMovesBoard;
-}
-    uint64_t generateBishopMoves(uint64_t bishopBitboard, uint64_t occupiedSquares){
-    uint64_t bishopMovesBoard = 0ULL;
-    for (int sq = 0; sq < 64 ; sq ++){
-        if (isSet(bishopBitboard,sq)){
-            bishopMovesBoard |= get_bishop_attacks(sq,occupiedSquares);
-        }
-    }
-    return bishopMovesBoard;
-}
-    uint64_t generateQueenMoves(uint64_t queenBitboard, uint64_t occupiedSquares){
-    uint64_t queenMovesBoard = 0ULL;
-    queenMovesBoard = generateBishopMoves(queenBitboard, occupiedSquares) | generateRookMoves(queenBitboard, occupiedSquares);
-    
-    return queenMovesBoard;
-}
-    uint64_t generateKnightMoves(uint64_t knightBitBoard){
-    /*
-        15  17
-     6         10
-           x
-     10         6
-        17  15
-    */
-    
-    //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
-   /*
-    uint64_t bitboard = knightBitBoard;
-    uint64_t knightMoves = 0ULL;
+    void initializeBoard()
+    {                                       // Initialize the chess board with pieces | LSB = 1a-1d, MSB = 8a-8d
+        whitePawns = 0x000000000000FF00ULL; // every digit = 4 bits (squares on the board). In hexa, F = 1111, so the 2nd row's entirely set to 1 for pawns
+        blackPawns = 0x00FF000000000000ULL; // 00000000 11111111 000000000
+        
+        whiteRooks = 0x0000000000000081ULL;
+        blackRooks = 0x8100000000000000ULL; // 10000001 00000000 000000000 1010 = A
 
-    //prevents leftside overflow
-    uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
-    uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
-    //prevents rightside overflow
-    uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
-    uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
+        whiteKnights = 0x0000000000000042ULL; // 01000010
+        blackKnights = 0x4200000000000000ULL;
 
-    //bitboard is a representation of a number, so if a value is higher or lower than the range of the representation (64 bits), then it will automatically not be shown --> border issues do not matter
-    
+        whiteBishops = 0x0000000000000024ULL; // (0000)(0000) (0010)(0100)
+        blackBishops = 0x2400000000000000ULL;
 
-    
-    //checks the mapping before
-    
-    knightMoves |= (bitboard & notAFile) >> 17;
-    knightMoves |= (bitboard & notHFile) >> 15;
-    knightMoves |= (bitboard & notABFile) >> 10; 
-    knightMoves |= (bitboard & notGHFile) >> 6;
-    
-    knightMoves |= (bitboard & notHFile) << 17;
-    knightMoves |= (bitboard & notAFile) << 15;
-    knightMoves |= (bitboard & notGHFile) << 10;
-    knightMoves |= (bitboard & notABFile) << 6;
-   
+        whiteKings = 0x0000000000000010ULL; // 00010000
+        blackKings = 0x1000000000000000ULL; // 10000000
 
-    return knightMoves;
-}
-    */
-/* COMMENTING OUT FOR TESTING OF OTHER METHODS!
-    uint64_t getRelevantMoveMask(int fromSquare, char pieceType, bool isWhiteTurn ){
-        // Completed on 4/7/25
-        // returns the relevant map for a given square.
-        init_sliders_attacks(1); //for bishops
-        init_sliders_attacks(0); //for rooks
+        whiteQueens = 0x0000000000000008ULL;
+        blackQueens = 0x0800000000000000ULL;
+
+        whitePieces = whitePawns | whiteBishops | whiteRooks | whiteKnights | whiteKings | whiteQueens;
+        blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
+        occupiedSquares = whitePieces | blackPieces;
+        emptySquares = ~occupiedSquares;
+        isWhiteTurn = 1;
+    };
 
 
-        pieceType = tolower(pieceType);
-        uint64_t possibleMoves = 0x0000000000000000ULL;
-
-        uint64_t occupiedSquares = getOccupiedSquares();
-        uint64_t friendlyOccupiedSquares;
-        uint64_t enemyOccupiedSquares;
-        if (isWhiteTurn){
-            friendlyOccupiedSquares = getWhitePieces();
-            enemyOccupiedSquares = getBlackPieces();
-
-        }
-        else{
-            friendlyOccupiedSquares = getBlackPieces();
-            enemyOccupiedSquares = getWhitePieces();
-        }
-
-        switch(pieceType){
-            //NEED TO DO PAWN AND KING BECAUSE THEIR MOVES DEPEND ON OCCUPIED
-            case 'p': //pawn
-                possibleMoves = getPawnMask(fromSquare, isWhiteTurn);
-                possibleMoves &= ~occupiedSquares; //only keeps possible moves not blocked by existing
-                
-                uint64_t possibleCaptures = getPawnCaptures(fromSquare, isWhiteTurn);
-                possibleCaptures &= enemyOccupiedSquares;
-
-                possibleMoves |= possibleCaptures;
-                break;
-                
-            case 'k': //king
-                possibleMoves = getKingMask(fromSquare);
-                possibleMoves &= ~friendlyOccupiedSquares;
-                break;
-            case 'n': //knight
-                possibleMoves = getKnightMask(fromSquare);
-                possibleMoves &= ~friendlyOccupiedSquares;
-                break;
-            case 'r': //rook
-                possibleMoves = get_rook_attacks(fromSquare, occupiedSquares );
-                possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
-                break;
-            case 'b': //bishop
-                possibleMoves = get_bishop_attacks(fromSquare, occupiedSquares );
-                possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
-                break;
-            case 'q': //queen
-                possibleMoves = ( getRookMask(fromSquare) | getBishopMask(fromSquare) );  //all possible directional moves
-                possibleMoves &= ~friendlyOccupiedSquares;
-                break;
-            
-        }
-        return possibleMoves;
-    }
-    
-    //Should be passing bitboard in its entirity instead of a square... logic should be vectorized, removes loops
-    uint64_t getPossibleMovesMask(int fromSquare, char pieceType, bool isWhiteTurn){
-        init_sliders_attacks(1); //for bishops
-        init_sliders_attacks(0); //for rooks
-
-        uint64_t pieceMask = getRelevantMoveMask(fromSquare, pieceType, isWhiteTurn);
-        uint64_t friendlyOccupied;
-        if (isWhiteTurn) friendlyOccupied = getWhitePieces();
-        else{
-            friendlyOccupied = getBlackPieces();
-        }
-        uint64_t possibleMoves = ( pieceMask & (~friendlyOccupied) ); //removes the ability to capture friendly pieces
-    }
-   
-   
-   */
     //1 billion helper and bool methods
-    bool isWhiteTurn(){
-        return (gameTurn == 1);
+    int getTurn(){
+        if (isWhiteTurn == 1) return 1;
+        return 0;
     }
     bool isWhitePiece(int square)
     {
@@ -654,78 +598,111 @@ public:
         return ((occupiedSquares) & (1ULL << square)) != 0;
         //!= 0 returns it as a boolean instead of numerical value, more accurate
     };
-    uint64_t getOccupiedSquares()
+    uint64_t& getOccupiedSquares()
     {
         return occupiedSquares;
     };
-    uint64_t getEmptySquares(){
+    uint64_t& getEmptySquares(){
         return emptySquares;
     }
-    uint64_t getPieces(int color){
+    uint64_t& getPieces(int color){
         if (color) return getWhitePieces();
         else return getBlackPieces();
     }
-    uint64_t getWhitePieces()
+    uint64_t& getWhitePieces()
     {
         return whitePieces;
     };
-    uint64_t getBlackPieces()
+    uint64_t& getBlackPieces()
     {
         return blackPieces;
     };
-    uint64_t getWhitePawn()
+    uint64_t& getWhitePawn()
     {
         return whitePawns;
     };
-    uint64_t getBlackPawn()
+    uint64_t& getBlackPawn()
     {
         return blackPawns;
     };
-    uint64_t getWhiteKnight()
+    uint64_t& getWhiteKnight()
     {
         return whiteKnights;
     };
-    uint64_t getBlackKnight()
+    uint64_t& getBlackKnight()
     {
         return blackKnights;
     };
-    uint64_t getWhiteBishop()
+    uint64_t& getWhiteBishop()
     {
         return whiteBishops;
     };
-    uint64_t getBlackBishop()
+    uint64_t& getBlackBishop()
     {
         return blackBishops;
     };
-    uint64_t getWhiteRook()
+    uint64_t& getWhiteRook()
     {
         return whiteRooks;
     };
-    uint64_t getBlackRook()
+    uint64_t& getBlackRook()
     {
         return blackRooks;
     };
-    uint64_t getWhiteQueen()
+    uint64_t& getWhiteQueen()
     {
         return whiteQueens;
     };
-    uint64_t getBlackQueen()
+    uint64_t& getBlackQueen()
     {
         return blackQueens;
     };
-    uint64_t getWhiteKing()
+    uint64_t& getWhiteKing()
     {
         return whiteKings;
     };
-    uint64_t getBlackKing()
+    uint64_t& getBlackKing()
     {
         return blackKings;
     };
 };
+
+enum MoveType{
+    Normal,
+    Capture,
+    Castling,
+    EnPassant,
+    Promotion
+};
+class MoveInformation{
+    private:
+        Board state;
+    public:
+    //C++ member init
+    
+    MoveInformation(int from, int to, Piece piece, MoveType moveType = Normal, Piece capturedPiece = none, bool isPromotion = false) : from(from), to(to), piece(piece), moveType(moveType), capturedPiece(capturedPiece), isPromotion(isPromotion) {}
+    //Move move1(12, 28, PieceType::Pawn, MoveType::Capture, PieceType::Knight, true); <-- example of how the move would be declared (member list initialization)
+
+    int from,to;          
+    int piece, capturedPiece;
+    int moveType;  
+    bool isPromotion; 
+    int promotionPiece; 
+    int isWhiteMove;
+    
+
+
+
+    bool isLegalMove(Board state){
+        /*
+        
+        */
+    }
+};
 class Game
 {
 private:
-    bool isWhiteTurn;
+    int isWhiteTurn1;
     //bool isGameOver;
     Board board;
 
@@ -817,77 +794,7 @@ public:
         }
     }
 
-    MoveInformation parseMove()
-    {
-        std::string lineArg;
-        std::getline(std::cin, lineArg);
-        std::string moveStr = lineArg; // will be editing this
-
-        MoveInformation move;
-
-        move.chessNotation = lineArg;
-        // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
-        move.isCapture = moveStr.find('x') != std::string::npos;
-        move.isPromotion = moveStr.find('=') != std::string::npos;
-        move.isCheck = moveStr.find('+') != std::string::npos;
-        move.isCheckMate = moveStr.find('#') != std::string::npos;
-        move.isKingCastle = (moveStr == "O-O");
-        move.isQueenCastle = (moveStr == "O-O-O");
-        move.isAmbiguous = false;
-        // std::cout << moveStr << std::endl;
-        if (moveStr.at(0) == 'B' || moveStr.at(0) == 'N' || moveStr.at(0) == 'R' || moveStr.at(0) == 'K' || moveStr.at(0) == 'Q')
-        {
-            move.pieceType = moveStr.at(0);
-            moveStr = moveStr.substr(1);
-        }
-        else
-        {
-            move.pieceType = 'P';
-        }
-
-        // std::cout << moveStr << std::endl;
-
-        if (move.isCheck || move.isCheckMate)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-        }
-        // std::cout << moveStr << std::endl;
-        if (move.isPromotion)
-        {
-            move.promotionPiece = moveStr.at(moveStr.length() - 1);
-            moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
-        }
-        std::cout << moveStr << std::endl;
-        // the last thing in the move string at this point must be the to information
-        move.toRank = moveStr.at(moveStr.length() - 1);
-        move.toFile = moveStr.at(moveStr.length() - 2);
-        moveStr = moveStr.substr(0, moveStr.length() - 2);
-        // std::cout << moveStr << std::endl;
-        if (move.isCapture)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-            // thing before to square, if capture is 'x'
-        }
-        // std::cout << moveStr << std::endl;
-        if (moveStr.length() == 1)
-        {
-            // if anything is left, it must be ambigiuous data
-            move.isAmbiguous = true;
-            move.fromValue = moveStr.at(0);
-            std::cout << move.fromValue << std::endl;
-        }
-        // std::cout << moveStr << std::endl;
-
-        // square = File * 8 + Rank
-        // a = 1
-        // rank = numbers, File == files
-        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-
-        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
-        std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
-        return move;
-    }
-
+   
     void printMove(MoveInformation move)
     {
         int asciiRank = static_cast<int>(move.toRank) - 98;
@@ -920,3 +827,75 @@ public:
     }
 
 };
+
+//WHERE WOULD PARSEMOVE LIVE? WITHIN GAME AS THAT IS WHEN MOVEMENT IN ASKED FOR
+// void parseMove()
+//     {
+//         std::string lineArg;
+//         std::getline(std::cin, lineArg);
+//         std::string moveStr = lineArg; // will be editing this
+
+//         MoveInformation move;
+
+//         move.chessNotation = lineArg;
+//         // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
+//         move.isCapture = moveStr.find('x') != std::string::npos;
+//         move.isPromotion = moveStr.find('=') != std::string::npos;
+//         move.isCheck = moveStr.find('+') != std::string::npos;
+//         move.isCheckMate = moveStr.find('#') != std::string::npos;
+//         move.isKingCastle = (moveStr == "O-O");
+//         move.isQueenCastle = (moveStr == "O-O-O");
+//         move.isAmbiguous = false;
+//         // std::cout << moveStr << std::endl;
+//         if (moveStr.at(0) == 'B' || moveStr.at(0) == 'N' || moveStr.at(0) == 'R' || moveStr.at(0) == 'K' || moveStr.at(0) == 'Q')
+//         {
+//             move.pieceType = moveStr.at(0);
+//             moveStr = moveStr.substr(1);
+//         }
+//         else
+//         {
+//             move.pieceType = 'P';
+//         }
+
+//         // std::cout << moveStr << std::endl;
+
+//         if (move.isCheck || move.isCheckMate)
+//         {
+//             moveStr = moveStr.substr(0, moveStr.length() - 1);
+//         }
+//         // std::cout << moveStr << std::endl;
+//         if (move.isPromotion)
+//         {
+//             move.promotionPiece = moveStr.at(moveStr.length() - 1);
+//             moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
+//         }
+//         std::cout << moveStr << std::endl;
+//         // the last thing in the move string at this point must be the to information
+//         move.toRank = moveStr.at(moveStr.length() - 1);
+//         move.toFile = moveStr.at(moveStr.length() - 2);
+//         moveStr = moveStr.substr(0, moveStr.length() - 2);
+//         // std::cout << moveStr << std::endl;
+//         if (move.isCapture)
+//         {
+//             moveStr = moveStr.substr(0, moveStr.length() - 1);
+//             // thing before to square, if capture is 'x'
+//         }
+//         // std::cout << moveStr << std::endl;
+//         if (moveStr.length() == 1)
+//         {
+//             // if anything is left, it must be ambigiuous data
+//             move.isAmbiguous = true;
+//             move.fromValue = moveStr.at(0);
+//             std::cout << move.fromValue << std::endl;
+//         }
+//         // std::cout << moveStr << std::endl;
+
+//         // square = File * 8 + Rank
+//         // a = 1
+//         // rank = numbers, File == files
+//         int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
+
+//         move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
+//         std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
+//         return move;
+//     }

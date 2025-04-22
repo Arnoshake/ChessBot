@@ -67,19 +67,11 @@ uint64_t getRookMask(int square){
     for (int file = targetFile + 1; file <= 6 ; file++) rookAttacks |= (1ULL << (8*targetRank + file) ); //right
     for (int file = targetFile - 1; file >= 1 ; file--) rookAttacks |= (1ULL << (8*targetRank + file) ); //left
     return rookAttacks;
-
-
-
-
-
-    
-        return rookAttacks;
 }
 uint64_t getBishopMask(int square){
     int targetRank = square / 8; //rows
     int targetFile = square % 8; //columns
     uint64_t bishopAttacks = 0ULL;
-
     /*
         For loop syntax explanation:
             the rank and file are initialized to the first nonSelf tile for each cardinal direction (pieces cannot move to themselves)
@@ -92,111 +84,20 @@ uint64_t getBishopMask(int square){
     for (int rank = targetRank - 1, file = targetFile + 1; rank >= 1 && file <= 6; rank--, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // SE
     for (int rank = targetRank - 1, file = targetFile - 1; rank >= 1 && file >= 1; rank--, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // SW
     return bishopAttacks;
-
-
-
-
-
-
-
-
-
-
-    /*
-    int fromSquare = square;
-    uint64_t rightBorder = 0x8080808080808080ULL;
-    uint64_t leftBorder =  0x0101010101010101ULL;
-    uint64_t topBorder =   0xFF00000000000000ULL;
-    uint64_t botBorder =   0x00000000000000FFULL;
-
-        uint64_t bishopAttacks = 0x0ULL;
-        uint64_t northEastMoves = 0x0ULL;
-        uint64_t southEastMoves = 0x0ULL;
-        uint64_t southWestMoves = 0x0ULL;
-        uint64_t NorthWestMoves = 0x0ULL;
-        // need to capture | and -- moves, before interuption
-       
-        // step 1 is to map all theoretical moves (before blockage)
-        uint64_t spotOfInterest = 1ULL << fromSquare; // 000010000
-        while ((spotOfInterest & (rightBorder | topBorder)) == 0) //NORTHEAST 
-        { // while this square is not on the border
-            northEastMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest << 9); //shift up and right (number is larger by 9 digits aka SL)
-            //std::cout <<"RIGHT: " << northEastMoves << std::endl;
-
-           
-
-
-            if (spotOfInterest & (rightBorder | topBorder)){
-                northEastMoves |= spotOfInterest;
-                break;
-            }
-        }
-            
-            
-        bishopAttacks |= northEastMoves; //add the right possible moves to the master linear possible moves
-        //std::cout <<"RIGHT*: " << rightPossibleMoves << std::endl;
-        
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & (rightBorder | botBorder)) == 0) //SOUTHEAST
-        { // while this square is not on the border
-            southEastMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest >> 7); //shift right 
-            std::cout <<"LEFT: " << southEastMoves << std::endl;
-
-           
-
-
-            if (spotOfInterest & (rightBorder | botBorder)){
-                southEastMoves |= spotOfInterest;
-                break;
-            }
-        }
-        //std::cout <<"LEFT*: " << leftPossibleMoves << std::endl;
-        bishopAttacks |= southEastMoves; //add the right possible moves to the master linear possible moves
-
-
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & (leftBorder | botBorder)) == 0) //SOUTHWEST
-        { // while this square is not on the border
-            southWestMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest >> 9); //shift right 
-            //std::cout <<"UP: " << upPossibleMoves << std::endl;
-
-           
-            if (spotOfInterest & (leftBorder | botBorder)){
-                southWestMoves |= spotOfInterest;
-                break;
-            }
-        }
-        //std::cout <<"TOP*: " << upPossibleMoves << std::endl;
-        bishopAttacks |= southWestMoves; //add the right possible moves to the master linear possible moves
-            
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & (leftBorder | topBorder)) == 0) 
-        { // while this square is not on the border
-            NorthWestMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest << 7); //shift right 
-           // std::cout <<"DOWN: " << downPossibleMoves << std::endl;
-
-            if (spotOfInterest & (leftBorder | topBorder)){
-                NorthWestMoves |= spotOfInterest;
-                break;
-            }
-        }
-            
-        //std::cout <<"BOT*: " << downPossibleMoves << std::endl;
-        bishopAttacks |= NorthWestMoves; //add the right possible moves to the master linear possible moves
-
-        bishopAttacks = bishopAttacks ^ (1ULL << fromSquare);
-
-        return bishopAttacks;
-        */
-}
+   }
 uint64_t getQueenMask(int square){
     return ( (getBishopMask(square) | (getRookMask(square)) ));
 }
 uint64_t getKnightMask(int square){
+    /*
+        15  17
+     6         10
+           x
+     10         6
+        17  15
+    
+ up is SL, down is SR
+    */
     //prevents leftside overflow
     uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
     uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
@@ -208,15 +109,7 @@ uint64_t getKnightMask(int square){
     //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
     uint64_t knightMoves = 0ULL;
     uint64_t bitboard = 0ULL;
-    /*
-        15  17
-     6         10
-           x
-     10         6
-        17  15
     
- up is SL, down is SR
-    */
    uint64_t startingSquare = 1 << square;
    bitboard |= startingSquare;
    //step 1
@@ -306,18 +199,34 @@ uint64_t getPawnCaptures(int square, int side){
 }
 
 //CURRENTLY WOKRING ON!
-uint64_t generatePawnMoves1(uint64_t pawnBitBoard, uint64_t occupied, int color, uint64_t enemyPieces ){ //white = 
-    
+
+uint64_t generatePawnMoves1(Board state){ //NEED TO DO EN PASSANT AND TOUCH UP ON PASSED PARAMETERS
+    //Modularize the code below to happen every time a state is created? (Outsource to board class)
+    uint64_t occupied = state.getOccupiedSquares();
+    uint64_t emptySquares = ~state.getOccupiedSquares();
+    int color = state.getTurn(); //a board should store info on whos move it is, thats very important!
+
+    uint64_t pawnBitBoard;
+    uint64_t enemyPieces;
+    uint64_t friendlyPieces;
+    if (color){
+        friendlyPieces = state.getWhitePieces();
+        enemyPieces = state.getBlackPieces();
+    }
+    else{
+        friendlyPieces = state.getBlackPieces();
+        enemyPieces = state.getWhitePieces();
+    }
+
     uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
     uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
     //prevents rightside overflow
     uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
     uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
 
-    uint64_t emptySquares =  ~occupied;
-    uint64_t possibleMoves = 0;
-    
+    uint64_t possibleMoves = 0ULL;
     uint64_t possibleCaptures = 0ULL;
+
     if (color == 1){ // pawns move up.. << & en Passant rank = 4
         std::cout<<"cheese" << std::endl;
         uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
@@ -328,37 +237,109 @@ uint64_t generatePawnMoves1(uint64_t pawnBitBoard, uint64_t occupied, int color,
         possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
         possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
         possibleMoves |= possibleCaptures;
-        return possibleCaptures | possibleMoves;
+        possibleMoves &= ~(friendlyPieces);
+        return possibleMoves;
     }
     else{ //identical logic, different variable values and shifting operator
-        return 0ULL;
+        std::cout<<"cheese cheese" << std::endl;
+        uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
+        uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & emptySquares ) >> 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
+    
+        possibleMoves = singlePush | doublePush ;
+        
+        possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
+        possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+        possibleMoves |= possibleCaptures;
+        possibleMoves &= ~(friendlyPieces);
+        return possibleCaptures | possibleMoves;
     }
     return 1ULL;
 }
 
+void addPiece(Board state, int color, int piece, int square){
+    if (white){
+        switch(piece){
+            case pawn:
+                set_bit(state.getWhitePawn(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+            case bishop:
+                set_bit(state.getWhiteBishop(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+            case knight:
+                set_bit(state.getWhiteKnight(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+            case rook:
+                set_bit(state.getWhiteRook(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+            case queen:
+                set_bit(state.getWhiteQueen(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+            case king:
+                set_bit(state.getWhiteKing(), square);
+                set_bit(state.getWhitePieces(),square);
+                break;
+        }
+
+    }
+    else{
+        switch(piece){
+            case pawn:
+                set_bit(state.getBlackPawn(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+            case bishop:
+                set_bit(state.getBlackBishop(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+            case knight:
+                set_bit(state.getBlackKnight(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+            case rook:
+                set_bit(state.getBlackRook(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+            case queen:
+                set_bit(state.getBlackQueen(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+            case king:
+                set_bit(state.getBlackKing(), square);
+                set_bit(state.getBlackPieces(),square);
+                break;
+        }
+    }
+}
 
 
+bool isLegalMove(Board state, Move move){
 
+}
 int main(){
     //iniialize magic stuff working for rooks, bishops
     init_sliders_attacks(1); //for bishops
     init_sliders_attacks(0); //for rooks
-
-    uint64_t blackPieces = 0ULL;
-    uint64_t whitePieces = 0ULL;
-   
-    uint64_t occupied = blackPieces | whitePieces;
+    Board state;
+    state.initializeBoard();
+    addPiece(state,1,pawn,d7);
+    addPiece(state,1,pawn,h7);
+    addPiece(state,1,pawn,e6);
     
-    printBitBoard(generatePawnMoves1(whitePieces,occupied,1,blackPieces) );
+    printBitBoard(generatePawnMoves1(state));
+    return 0;
     
 
 
+    
+}
 
 
-
-
-
-    /*
+/*
     //CODE FOR CREATING LOOKUP TABLE FOR KNIGHTS, KINGS
     std::ofstream outFile("possibleMoveMasks.txt");  // Open (or create) a file named "output.txt"
 
@@ -394,9 +375,6 @@ int main(){
     outFile.close(); 
     
     */
-    return 0;
-    
-}
 void writeToFileFormat(std::ofstream& outputFile,std::string name, uint64_t pieceArray[64]){
     outputFile << "const uint64_t " << name << "[64] = {\n";
 
@@ -417,189 +395,3 @@ void writeToFileFormat(std::ofstream& outputFile,std::string name, uint64_t piec
 
 
 
-//ARCHIVED KNIGHT CODE
-
-/* This code is naive, first approach at creating bitboard-scale move generation. The power of bitboard is that parallel actions can exist (apply to all at same time)
-uint64_t generateKnightMovesBitBoard(uint64_t knightBitBoard, uint64_t occupiedSquares){
-    uint64_t knightMovesBoard = 0ULL;
-    for (int sq = 0; sq < 64 ; sq ++){
-        if (isSet(knightBitBoard,sq)){
-            knightMovesBoard |= getKnightMask(sq);
-        }
-    }
-    return knightMovesBoard;
-}
-
-  //This code is bad because it checks the mapping AFTER shifting... you want to prevent bad moves BEFORe they happen!
-   //if ( (bitboard >> 17) & (notHFile) ) knightMoves |= (bitboard >> 17);
-   //if ( (bitboard >> 15) & (notAFile) ) knightMoves |= (bitboard >> 15);
-   //if ( (bitboard >> 10) & (notGHFile) ) knightMoves |= (bitboard >> 10);
-   //if ( (bitboard >> 6)  & (notABFile) ) knightMoves |= (bitboard >> 6);
-   
-   //if ( (bitboard << 17) & (notAFile) ) knightMoves |= (bitboard << 17);
-   //if ( (bitboard << 15) & (notHFile) ) knightMoves |= (bitboard << 15);
-   //if ( (bitboard << 10) & (notABFile) ) knightMoves |= (bitboard << 10);
-   //if ( (bitboard << 6)  & (notGHFile) ) knightMoves |= (bitboard << 6);
-*/
-
-
-
-// ARCHIVED ROOK MOVE GEN, NO BLOCKS, SQUARE BASED
-
-
-/*int fromSquare = square;
-
-    This is older code. I did not like how the while loop was too abstract and very long code
-        After looking at chess programming youtube, his for loops were superior. decided to switch to this
-    uint64_t rightBorder = 0x8080808080808080ULL;
-    uint64_t leftBorder =  0x0101010101010101ULL;
-    uint64_t topBorder =   0xFF00000000000000ULL;
-    uint64_t botBorder =   0x00000000000000FFULL;
-
-        uint64_t rookAttacks = 0x0ULL;
-        uint64_t leftPossibleMoves = 0x0ULL;
-        uint64_t rightPossibleMoves = 0x0ULL;
-        uint64_t upPossibleMoves = 0x0ULL;
-        uint64_t downPossibleMoves = 0x0ULL;
-        // need to capture | and -- moves, before interuption
-       
-        // step 1 is to map all theoretical moves (before blockage)
-        uint64_t spotOfInterest = 1ULL << fromSquare; // 000010000
-        while ((spotOfInterest & rightBorder) == 0) 
-        { // while this square is not on the border
-            rightPossibleMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest << 1); //shift right 
-            std::cout <<"RIGHT: " << rightPossibleMoves << std::endl;
-
-           
-
-
-            if (spotOfInterest & rightBorder){
-                rightPossibleMoves |= spotOfInterest;
-                break;
-            }
-        }
-            
-            
-        rookAttacks |= rightPossibleMoves; //add the right possible moves to the master linear possible moves
-        //std::cout <<"RIGHT*: " << rightPossibleMoves << std::endl;
-        
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & leftBorder) == 0)
-        { // while this square is not on the border
-            leftPossibleMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest >> 1); //shift right 
-            std::cout <<"LEFT: " << leftPossibleMoves << std::endl;
-
-           
-
-
-            if (spotOfInterest & leftBorder){
-                leftPossibleMoves |= spotOfInterest;
-                break;
-            }
-        }
-        //std::cout <<"LEFT*: " << leftPossibleMoves << std::endl;
-        rookAttacks |= leftPossibleMoves; //add the right possible moves to the master linear possible moves
-
-
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & topBorder) == 0)
-        { // while this square is not on the border
-            upPossibleMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest << 8); //shift right 
-            //std::cout <<"UP: " << upPossibleMoves << std::endl;
-
-           
-            if (spotOfInterest & topBorder){
-                upPossibleMoves |= spotOfInterest;
-                break;
-            }
-        }
-        //std::cout <<"TOP*: " << upPossibleMoves << std::endl;
-        rookAttacks |= upPossibleMoves; //add the right possible moves to the master linear possible moves
-            
-        spotOfInterest = 1ULL << fromSquare;
-        while ((spotOfInterest & botBorder) == 0) 
-        { // while this square is not on the border
-            downPossibleMoves |= spotOfInterest; //combine the existing possible moves with the spot of interest mask
-            spotOfInterest = (spotOfInterest >> 8); //shift right 
-           // std::cout <<"DOWN: " << downPossibleMoves << std::endl;
-
-            if (spotOfInterest & botBorder){
-                downPossibleMoves |= spotOfInterest;
-                break;
-            }
-        }
-            
-        //std::cout <<"BOT*: " << downPossibleMoves << std::endl;
-        rookAttacks |= downPossibleMoves; //add the right possible moves to the master linear possible moves
-
-        rookAttacks = rookAttacks ^ (1ULL << fromSquare);
-    */
-
-
-
-
-    //OLD CODE, WAS WRITTEN BEFORE UNDERSTANDING THE STRENGTHS OF BITBOARD
-
-    /*
-// I DONT KNOW IF THIS METHOD IS EVEN NEEDED... BOARDS WILL BE PASSED AND IT WILL BE EXPLICIT WHEN DONE... NOT A DYNAMIC CALL
-uint64_t getRelevantMoveMask(int fromSquare, char pieceType, Board state ){
-    // Completed on 4/7/25
-    // returns the relevant map for a given square.
-    init_sliders_attacks(1); //for bishops
-    init_sliders_attacks(0); //for rooks
-
-    pieceType = tolower(pieceType);
-    uint64_t possibleMoves = 0x0000000000000000ULL;
-
-    uint64_t occupiedSquares = state.getOccupiedSquares();
-    uint64_t friendlyOccupiedSquares;
-    uint64_t enemyOccupiedSquares;
-    if (state.isWhiteTurn()){
-        friendlyOccupiedSquares = state.getWhitePieces();
-        enemyOccupiedSquares = state.getBlackPieces();
-
-    }
-    else{
-        friendlyOccupiedSquares = state.getBlackPieces();
-        enemyOccupiedSquares = state.getWhitePieces();
-    }
-
-    switch(pieceType){
-        //NEED TO DO PAWN AND KING BECAUSE THEIR MOVES DEPEND ON OCCUPIED
-        case 'p': //pawn
-            possibleMoves = getPawnMask(fromSquare, state.isWhiteTurn());
-            possibleMoves &= ~occupiedSquares; //only keeps possible moves not blocked by existing
-            
-            uint64_t possibleCaptures = getPawnCaptures(fromSquare, state.isWhiteTurn());
-            possibleCaptures &= enemyOccupiedSquares;
-
-            possibleMoves |= possibleCaptures;
-            break;
-            
-        case 'k': //king
-            possibleMoves = getKingMask(fromSquare);
-            possibleMoves &= ~friendlyOccupiedSquares;
-            break;
-        case 'n': //knight
-            possibleMoves = getKnightMask(fromSquare);
-            possibleMoves &= ~friendlyOccupiedSquares;
-            break;
-        case 'r': //rook
-            possibleMoves = get_rook_attacks(fromSquare, occupiedSquares );
-            possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
-            break;
-        case 'b': //bishop
-            possibleMoves = get_bishop_attacks(fromSquare, occupiedSquares );
-            possibleMoves &= ~friendlyOccupiedSquares; // removes friendly pieces from possible, blocking captures
-            break;
-        case 'q': //queen
-            possibleMoves = ( getRookMask(fromSquare) | getBishopMask(fromSquare) );  //all possible directional moves
-            possibleMoves &= ~friendlyOccupiedSquares;
-            break;
-        
-    }
-}
-*/

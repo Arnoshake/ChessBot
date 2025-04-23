@@ -222,21 +222,7 @@ uint64_t getBishopMask(int square){
     for (int rank = targetRank - 1, file = targetFile + 1; rank >= 1 && file <= 6; rank--, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // SE
     for (int rank = targetRank - 1, file = targetFile - 1; rank >= 1 && file >= 1; rank--, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // SW
     return bishopAttacks;
-
-
-
-
-
-
-
-
-
-
-    
 }
-
-
-
 
 int bishop_rellevant_bits[64] = {
     6, 5, 5, 5, 5, 5, 5, 6,
@@ -351,8 +337,12 @@ uint64_t rook_attacks_on_the_fly(int square, uint64_t block)
     return attacks;
 }
 #define get_bit(bitboard, square) (bitboard & (1ULL << square))
-#define set_bit(bitboard, square) (bitboard |= (1ULL << square))
-#define pop_bit(bitboard, square) (get_bit(bitboard, square) ? (bitboard ^= (1ULL << square)) : 0)
+void set_bit(uint64_t& bitboard, int square){
+     (bitboard |= (1ULL << square));
+}
+void pop_bit(uint64_t& bitboard, int square){
+    get_bit(bitboard, square) ? (bitboard ^= (1ULL << square)) : 0; //not my code... provided in Rook magic stuff
+}
 int count_bits(uint64_t bitboard) {
     // bit count
     int count = 0;
@@ -445,9 +435,33 @@ void init_sliders_attacks(int is_bishop)
         }
     }
 }
+
 bool isSet(uint64_t bitboard, int square){
     return (bitboard & (1ULL << square) ) != 0 ;
 }
+
+void printBitBoard(uint64_t board){
+    for (int rank = 8; rank >= 1; rank--)
+    { // Starts from rank 8 (top) down to rank 1
+        for (int file = 1; file <= 8; file++)
+        {
+            int square = (rank-1) * 8 + file-1;
+            
+            if (file == 0) std::cout << (rank + 1) << " ";
+        
+            if (( 1ULL << square) & board){
+                std::cout<<"1";
+            }
+            else{
+                std::cout<<"0";
+            }
+        }
+            
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
 class Board{
 private:
     
@@ -473,29 +487,34 @@ private:
     uint64_t occupiedSquares;
     uint64_t emptySquares;
 
-
     // 1= white, -1 = black
     int isWhiteTurn;
 
 public:
+    //prevents leftside overflow
+    const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
+    const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
+    //prevents rightside overflow
+    const uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
+    const uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
     Board(){
-        whitePawns = 0x000000000000FF00ULL; // every digit = 4 bits (squares on the board). In hexa, F = 1111, so the 2nd row's entirely set to 1 for pawns
-        blackPawns = 0x00FF000000000000ULL; // 00000000 11111111 000000000
+        whitePawns = 0ULL; 
+        blackPawns = 0ULL;
         
-        whiteRooks = 0x0000000000000081ULL;
-        blackRooks = 0x8100000000000000ULL; // 10000001 00000000 000000000 1010 = A
+        whiteRooks = 0ULL;
+        blackRooks = 0ULL; 
 
-        whiteKnights = 0x0000000000000042ULL; // 01000010
-        blackKnights = 0x4200000000000000ULL;
+        whiteKnights = 0ULL; 
+        blackKnights = 0ULL;
 
-        whiteBishops = 0x0000000000000024ULL; // (0000)(0000) (0010)(0100)
-        blackBishops = 0x2400000000000000ULL;
+        whiteBishops = 0ULL; 
+        blackBishops = 0ULL;
 
-        whiteKings = 0x0000000000000010ULL; // 00010000
-        blackKings = 0x1000000000000000ULL; // 10000000
+        whiteKings = 0ULL; 
+        blackKings = 0ULL; 
 
-        whiteQueens = 0x0000000000000008ULL;
-        blackQueens = 0x0800000000000000ULL;
+        whiteQueens = 0ULL;
+        blackQueens = 0ULL;
 
         whitePieces = whitePawns | whiteBishops | whiteRooks | whiteKnights | whiteKings | whiteQueens;
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
@@ -530,8 +549,314 @@ public:
         emptySquares = ~occupiedSquares;
         isWhiteTurn = 1;
     };
+    uint64_t possiblePawnMoves(){ 
+      
+        uint64_t pawnBitBoard;
+        uint64_t enemyPieces;
+        uint64_t friendlyPieces;
+        if (isWhiteTurn){
+            pawnBitBoard = getWhitePawn();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            pawnBitBoard = getBlackPawn();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
+    
+       
+    
+        uint64_t possibleMoves = 0ULL;
+        uint64_t possibleCaptures = 0ULL;
+    
+        if (isWhiteTurn == 1){ // pawns move up.. << & en Passant rank = 4
+            std::cout<<"cheese" << std::endl;
+            uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
+            uint64_t doublePush = ( ( ( (0xFF00 & pawnBitBoard) << 8) & emptySquares ) << 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
+        
+            possibleMoves = singlePush | doublePush ;
+            
+            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+            possibleMoves |= possibleCaptures;
+            possibleMoves &= ~(friendlyPieces);
+            return possibleMoves;
+        }
+        else{ //identical logic, different variable values and shifting operator
+            std::cout<<"cheese cheese" << std::endl;
+            uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
+            uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & emptySquares ) >> 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
+        
+            possibleMoves = singlePush | doublePush ;
+            
+            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+            possibleMoves |= possibleCaptures;
+            possibleMoves &= ~(friendlyPieces);
+            return possibleCaptures | possibleMoves;
+        }
+    }
+    uint64_t possibleKnightMoves(){
+        /*
+            15  17
+         6         10
+               x
+         10         6
+            17  15
+        
+        */
+        //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
+        uint64_t knightBitBoard;
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        if (isWhiteTurn){
+            knightBitBoard = getWhiteKnight();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            knightBitBoard = getBlackKnight();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
+        uint64_t bitboard = knightBitBoard;
+        uint64_t knightMoves = 0ULL;
+    
+        knightMoves |= (bitboard & notHFile) << 17;
+        knightMoves |= (bitboard & notAFile) << 15;
+        knightMoves |= (bitboard & notGHFile) << 10;
+        knightMoves |= (bitboard & notABFile) << 6;
+        knightMoves |= (bitboard & notAFile) >> 17;
+        knightMoves |= (bitboard & notHFile) >> 15; 
+        knightMoves |= (bitboard & notABFile) >> 10; 
+        knightMoves |= (bitboard & notGHFile) >> 6; 
+        knightMoves &= ~friendlyPieces;
+        return knightMoves;
+    }
+    uint64_t possibleBishopMoves(){
+        uint64_t bishopBitboard = 0ULL;
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        if (isWhiteTurn){
+            bishopBitboard = getWhiteBishop();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            bishopBitboard = getBlackBishop();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
+        uint64_t bishopMoves = 0ULL;
+        for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
+            if (isSet(bishopBitboard,square)){
+                bishopMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+            }
+        }
+        bishopMoves &= ~friendlyPieces;
+        return bishopMoves;
+    }
+    uint64_t possibleRookMoves(){
+        
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        uint64_t rookBitBoard = 0ULL;
+        if (isWhiteTurn){
+            rookBitBoard = getWhiteRook();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            rookBitBoard = getBlackRook();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
 
+        uint64_t rookMoves = 0ULL;
+        for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
+            if (isSet(rookBitBoard,square)){
+                rookMoves |= get_rook_attacks(square,getOccupiedSquares() );
+            }
+        }
+        rookMoves &= ~ friendlyPieces;
+        return rookMoves;
+    }
+    uint64_t possibleQueenMoves(){
+        uint64_t queenBitBoard = 0ULL;
+        uint64_t enemyPieces;
+        uint64_t friendlyPieces;
+        if (isWhiteTurn){
+            queenBitBoard = getWhiteQueen();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            queenBitBoard = getBlackQueen();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
+        queenBitBoard = possibleRookMoves() | possibleBishopMoves();
+        
+        return queenBitBoard;
+    }
+    uint64_t possibleKingMoves(){
+        
+        uint64_t kingBitBoard;
+        uint64_t enemyPieces;
+        uint64_t friendlyPieces;
+        if (isWhiteTurn){
+            kingBitBoard = getWhiteKing();
+            friendlyPieces = getWhitePieces();
+            enemyPieces = getBlackPieces();
+        }
+        else{
+            kingBitBoard = getBlackKing();
+            friendlyPieces = getBlackPieces();
+            enemyPieces = getWhitePieces();
+        }
 
+        
+
+        uint64_t kingAttack = 0ULL;
+
+    
+        //top
+        kingAttack |= (notAFile & kingBitBoard) >> 9;
+        kingAttack |= kingBitBoard >> 8;
+        kingAttack |= (notAFile & kingBitBoard) >> 7; 
+        kingAttack |= (notHFile & kingBitBoard) >> 1;
+        //bottom
+        kingAttack |= (notHFile & kingBitBoard) << 7;
+        kingAttack |= kingBitBoard << 8;
+        kingAttack |= (notHFile & kingBitBoard) << 9;
+        kingAttack |= (notAFile & kingBitBoard) << 1;
+    
+        kingAttack &= ~friendlyPieces;
+        return (kingAttack);
+    }
+    
+    void addPiece(int color, int piece, int square){
+        if (color){
+            switch(piece){
+                case pawn:
+                    set_bit(getWhitePawn(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+                case bishop:
+                    set_bit(getWhiteBishop(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+                case knight:
+                    set_bit(getWhiteKnight(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+                case rook:
+                    set_bit(getWhiteRook(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+                case queen:
+                    set_bit(getWhiteQueen(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+                case king:
+                    set_bit(getWhiteKing(), square);
+                    set_bit(getWhitePieces(),square);
+                    break;
+            }
+        }
+        else{
+            switch(piece){
+                case pawn:
+                    set_bit(getBlackPawn(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+                case bishop:
+                    set_bit(getBlackBishop(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+                case knight:
+                    set_bit(getBlackKnight(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+                case rook:
+                    set_bit(getBlackRook(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+                case queen:
+                    set_bit(getBlackQueen(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+                case king:
+                    set_bit(getBlackKing(), square);
+                    set_bit(getBlackPieces(),square);
+                    break;
+            }
+        }
+        set_bit(getOccupiedSquares(),square);
+        getEmptySquares() = ~getOccupiedSquares();
+    }
+    void removePiece(int color, int piece, int square){
+        if (color){
+            switch(piece){
+                case pawn:
+                        pop_bit(getWhitePawn(), square);
+                        pop_bit(getWhitePieces(),square);
+                    break;
+                case bishop:
+                        pop_bit(getWhiteBishop(), square);
+                        pop_bit(getWhitePieces(),square);
+                    break;
+                case knight:
+                    pop_bit(getWhiteKnight(), square);
+                    pop_bit(getWhitePieces(),square);
+                    break;
+                case rook:
+                    pop_bit(getWhiteRook(), square);
+                    pop_bit(getWhitePieces(),square);
+                    break;
+                case queen:
+                    pop_bit(getWhiteQueen(), square);
+                    pop_bit(getWhitePieces(),square);
+                    break;
+                case king:
+                    pop_bit(getWhiteKing(), square);
+                    pop_bit(getWhitePieces(),square);
+                    break;
+            }
+        }
+        else{
+            switch(piece){
+                case pawn:
+                    pop_bit(getBlackPawn(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+                case bishop:
+                    pop_bit(getBlackBishop(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+                case knight:
+                    pop_bit(getBlackKnight(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+                case rook:
+                    pop_bit(getBlackRook(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+                case queen:
+                    pop_bit(getBlackQueen(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+                case king:
+                    pop_bit(getBlackKing(), square);
+                    pop_bit(getBlackPieces(),square);
+                    break;
+            }
+        }
+        set_bit(getOccupiedSquares(),square);
+        getEmptySquares() = ~getOccupiedSquares();
+    }
+    
     //1 billion helper and bool methods
     int getTurn(){
         if (isWhiteTurn == 1) return 1;

@@ -516,3 +516,140 @@ uint64_t getRelevantMoveMask(int fromSquare, char pieceType, Board state ){
 
         return bishopAttacks;
         */
+
+
+
+
+//MOVEMENT MASKS ( pieces) -- CODE OBSOLETE AS IT IS SQUARE ORIENTED INSTEAD OF BOARD ORIENTED
+
+// uint64_t getRookMask(int square){
+
+//     int targetRank = square / 8; //rows
+//     int targetFile = square % 8; //columns
+
+//     uint64_t rookAttacks = 0ULL;
+
+//     /*
+//         For loop syntax explanation:
+//             the rank and file are initialized to the first nonSelf tile for each cardinal direction (pieces cannot move to themselves)
+//             the loop will iterate until it reaches the 2nd to most outward square. This is important for masking with magic bitboards later
+//             the condition will update so that it then progresses further in the relevant cardinal direction 
+//     */
+//     for (int rank = targetRank + 1; rank <= 6; rank++) rookAttacks |= (1ULL << (8*rank + targetFile) ); //up
+//     for (int rank = targetRank - 1; rank >= 1 ; rank--) rookAttacks |= (1ULL << (8*rank + targetFile) ); //down
+    
+//     for (int file = targetFile + 1; file <= 6 ; file++) rookAttacks |= (1ULL << (8*targetRank + file) ); //right
+//     for (int file = targetFile - 1; file >= 1 ; file--) rookAttacks |= (1ULL << (8*targetRank + file) ); //left
+//     return rookAttacks;
+// }
+// uint64_t getBishopMask(int square){
+//     int targetRank = square / 8; //rows
+//     int targetFile = square % 8; //columns
+//     uint64_t bishopAttacks = 0ULL;
+//     /*
+//         For loop syntax explanation:
+//             the rank and file are initialized to the first nonSelf tile for each cardinal direction (pieces cannot move to themselves)
+//             the loop will iterate until it reaches the 2nd to most outward square. This is important for masking with magic bitboards later
+//             the condition will update so that it then progresses further in the relevant cardinal direction 
+//     */
+//     for (int rank = targetRank + 1, file = targetFile + 1; rank <= 6 && file <= 6; rank++, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // NE
+//     for (int rank = targetRank + 1, file = targetFile + -1; rank <= 6 && file >= 1; rank++, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // NW
+    
+//     for (int rank = targetRank - 1, file = targetFile + 1; rank >= 1 && file <= 6; rank--, file++) bishopAttacks |= (1ULL << (8*rank + file) ); // SE
+//     for (int rank = targetRank - 1, file = targetFile - 1; rank >= 1 && file >= 1; rank--, file--) bishopAttacks |= (1ULL << (8*rank + file) ); // SW
+//     return bishopAttacks;
+//    }
+// uint64_t getQueenMask(int square){
+//     return ( (getBishopMask(square) | (getRookMask(square)) ));
+// }
+// uint64_t getKnightMask(int square){
+//     /*
+//         15  17
+//      6         10
+//            x
+//      10         6
+//         17  15
+    
+//  up is SL, down is SR
+//     */
+//     //prevents leftside overflow
+//     uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
+//     uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
+
+//     //prevents rightside overflow
+//     uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
+//     uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
+//     //size of number handles up and down overflow (greater than or less than the upper/lower bound)
+//     //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
+//     uint64_t knightMoves = 0ULL;
+//     uint64_t bitboard = 0ULL;
+    
+//    uint64_t startingSquare = 1 << square;
+//    bitboard |= startingSquare;
+//    //step 1
+//    if ( (bitboard >> 17) & (notHFile) ) knightMoves |= (bitboard >> 17);
+//    if ( (bitboard >> 15) & (notAFile) ) knightMoves |= (bitboard >> 15);
+//    if ( (bitboard >> 10) & (notGHFile) ) knightMoves |= (bitboard >> 10);
+//    if ( (bitboard >> 6)  & (notABFile) ) knightMoves |= (bitboard >> 6);
+   
+//    if ( (bitboard << 17) & (notAFile) ) knightMoves |= (bitboard << 17);
+//    if ( (bitboard << 15) & (notHFile) ) knightMoves |= (bitboard << 15);
+//    if ( (bitboard << 10) & (notABFile) ) knightMoves |= (bitboard << 10);
+//    if ( (bitboard << 6)  & (notGHFile) ) knightMoves |= (bitboard << 6);
+    
+//     return knightMoves;
+// }
+// uint64_t getPawnMask(int square, int side){
+//     int rank = square / 8;
+//     int file = square % 8;
+//     //1 = white, 0 = black
+//     uint64_t pawnAttack = 0ULL;
+
+//     if (side == 1){ //white pawn (moves upward)
+//         if (rank == 1){ //has not moved yet, able to move two forward
+//             pawnAttack |= 1ULL << (square + 8);
+        
+//         }
+//         else{ //pawn can move one
+//             if (rank < 7) pawnAttack |= 1ULL << (square + 8);
+//         }
+//     }
+//     else if (side == 0){ //black (moves downward)
+//         //do not need to worry about overflow because pawns never exist on outer ranks... they promote
+
+//         if (rank == 6){ //has not moved yet, able to move two forward
+//             pawnAttack |= 1ULL << (square - 8);
+//             pawnAttack |= 1ULL << (square - 16);
+//         }
+//         else{ //pawn can move one
+//             if (rank > 0)pawnAttack |= 1ULL << (square - 8);
+//         }
+//     }
+//     return pawnAttack;
+
+// }
+// uint64_t getKingMask(int square){
+//     //prevents leftside overflow
+//     uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
+//     //prevents rightside overflow
+//     uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
+ 
+
+//     int rank = square / 8;
+//     int file = square % 8;
+//     uint64_t kingAttack = 0ULL;
+    
+//     if ( rank > 0) kingAttack |= 1ULL << (square - 8); // down
+//     if ( rank < 7) kingAttack |= 1ULL << (square + 8); // up
+//     if ( file > 0) kingAttack |= 1ULL << (square - 1); // left
+//     if ( file < 7) kingAttack |= 1ULL << (square + 1); // right
+
+//     if ( rank < 7 && file < 7) kingAttack |= 1ULL << (square + 9); //top right
+//     if ( rank < 7 && file > 0) kingAttack |= 1ULL << (square + 7); // top left
+//     if ( rank > 0 && file > 0) kingAttack |= 1ULL << (square - 9); // bot left
+//     if ( rank > 0 && file < 7) kingAttack |= 1ULL << (square - 7); // bot left
+    
+
+//     return kingAttack;
+// }
+

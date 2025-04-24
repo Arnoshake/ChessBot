@@ -17,11 +17,34 @@ int main(){
     //iniialize magic stuff working for rooks, bishops
     init_sliders_attacks(1); //for bishops
     init_sliders_attacks(0); //for rooks
-    Board state;
-    state.addPiece(white,rook,e5);
-    // state.addPiece (black,pawn,d5);
-    // state.addPiece (white,pawn,f5);
-    printBitBoard(state.possibleRookMoves());
+
+    std::cout << "Let's Play Chess!\n";
+    Game game;
+
+    int turnCount = 0;
+    while (1){
+        game.displayBoard();
+        std::cout << "Turn " << turnCount - 1 << ": It is *";
+        if (game.getGameTurn() ) std::cout << "WHITE's* ";
+        else std::cout <<"BLACK's*";
+        std::cout << "turn!\n Please enter your move (alg chess notation)\n";
+        MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
+        while (!game.isLegalMove(turnMove)){
+            std::cout<< "This is NOT a legal move! Please try again! \n";
+            turnMove = game.parseMove(game.getGameTurn());
+        }
+        
+        
+        game.makeMove(turnMove);
+        game.moveList.push_back(turnMove);
+        game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
+
+        if (game.isGameOver() ) break;
+
+        game.switchTurns();
+        turnCount++;
+    }
+    std::cout << "Game over!\n"; //add dynamic White vs Black win message
     return 0;
 }
 

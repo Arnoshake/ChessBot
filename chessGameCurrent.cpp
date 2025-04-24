@@ -558,6 +558,7 @@ public:
         friendlyPieces = whitePieces;
         enemyPieces = blackPieces;
         enPassantTargetSquare = -1;
+    
     };
     uint64_t possiblePawnMovesBitBoard(){ 
       
@@ -792,7 +793,7 @@ public:
         uint64_t pawnBitBoard = 1 << square;
         uint64_t friendlyPieces;
         uint64_t enemyPieces;
-        if (getTurn() == 1){ // pawns move up.. << & en Passant rank = 4
+        if (getSideForTurn() == 1){ // pawns move up.. << & en Passant rank = 4
             friendlyPieces = getWhitePieces();
             enemyPieces = getBlackPieces();
             uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
@@ -989,7 +990,7 @@ public:
         return none;
     }
     //1 billion helper and bool methods
-    int getTurn(){
+    int getSideForTurn(){
         if (isWhiteTurn == 1) return 1;
         return 0;
     }
@@ -1131,8 +1132,6 @@ public:
 
 
 class MoveInformation{
-    private:
-        Board state;
     public:
     
     MoveInformation(){
@@ -1153,6 +1152,9 @@ class MoveInformation{
 
         bool isEnpassant = false;
 
+        int turn; //#
+        int side; //white or black
+
 
         
         
@@ -1169,6 +1171,7 @@ class MoveInformation{
     int fromSquare;
 
     int turn;
+    int playerColor;
 
 };
 class Game
@@ -1182,22 +1185,41 @@ private:
 public:
     Game(){
         board.initializeBoard();
+        boardStates.push_back(board);
         isWhiteTurn = white;
+        whiteCastlePrivelege = true;
+        blackCastlePrivelege = true;
     }
 
-        std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
-        std::vector<Board> boardStates; //holds all board states
+    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
+    std::vector<Board> boardStates; //holds all board states
+
+    bool whiteCastlePrivelege;
+    bool blackCastlePrivelege;
     int& getGameTurn(){
         return isWhiteTurn;
     }
     void switchTurns() {
         if (getGameTurn() == white){
             getGameTurn() = black;
+            board.updateFriendlyEnemy(white);
         }
         if (getGameTurn() == black){
             getGameTurn() = white;
+            board.updateFriendlyEnemy(black);
         }
     }
+    bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
+        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
+        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(h8) == rook) && ((board.getPieceAtSquare(f8) == none)) && (board.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
+        return false;
+    }
+    bool canQueenCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later 
+        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(a1) == rook) && ((board.getPieceAtSquare(c1) == none)) && (board.getPieceAtSquare(d1) == none) && whiteCastlePrivelege) return true;
+        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(a8) == rook) && ((board.getPieceAtSquare(c8) == none)) && (board.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
+        return false;
+    }
+    
     void displayBoard()
     {
         /*
@@ -1356,44 +1378,73 @@ public:
         return moveListForBoard;
 
     }
-    std::vector<MoveInformation> generateLegalMoves(){
+    std::vector<MoveInformation> generateLegalMoves(int color){ // --> need to add castles
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
-        //pawns
-        movesToAdd = generateMovesFromBitboard(board.getWhitePawn(),pawn,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        //knights
-        movesToAdd = generateMovesFromBitboard(board.getWhiteKnight(),knight,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackKnight(),knight,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        //bishops
-        movesToAdd = generateMovesFromBitboard(board.getWhiteBishop(),bishop,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackBishop(),bishop,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        //rooks
-        movesToAdd = generateMovesFromBitboard(board.getWhiteRook(),rook,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackRook(),rook,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        //queens
-        movesToAdd = generateMovesFromBitboard(board.getWhiteQueen(),queen,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackQueen(),queen,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        //kings
-        movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        if (color == white){
+            movesToAdd = generateMovesFromBitboard(board.getWhitePawn(),pawn,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
+            movesToAdd = generateMovesFromBitboard(board.getWhiteKnight(),knight,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteBishop(),bishop,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteRook(),rook,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteQueen(),queen,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            if (canKingCastle(white));                      //HOW TO ADD MOVE?
+        }
+        else{
+            movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackKnight(),knight,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackBishop(),bishop,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackRook(),rook,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackQueen(),queen,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        }
         return allLegalMoves;
     }
-    
-    MoveInformation parseMove()
+    bool isLegalMove(MoveInformation moveOfInterest){
+        std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
+        if (isMoveInList(legalMoves,moveOfInterest)){
+            return true;
+        }
+        
+        return false;
+        
+    }
+    bool isMoveInList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
+        for (const auto& move : moveList) {
+            if (move.fromSquare == targetMove.fromSquare &&
+                move.toSquare == targetMove.toSquare &&
+                move.pieceType == targetMove.pieceType &&
+                move.isPromotion == targetMove.isPromotion &&
+                (!move.isPromotion || move.promotionPiece == targetMove.promotionPiece)) { // last condition ensures that promotion piece only matters if it is a promotion in the first place...
+                return true;
+            }
+        }
+        return false;
+    }
+    MoveInformation parseMove(int playerColor)
     {
         std::string lineArg;
         std::getline(std::cin, lineArg);
@@ -1409,6 +1460,32 @@ public:
         move.isCheckMate = moveStr.find('#') != std::string::npos;
         move.isKingCastle = (moveStr == "O-O");
         move.isQueenCastle = (moveStr == "O-O-O");
+
+        if (move.isKingCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = g1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = g8;
+                return move;
+            }
+        }
+        else if (move.isQueenCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = c1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = c8;
+                return move;
+            }
+        }
+        
         move.isAmbiguous = false;
         // std::cout << moveStr << std::endl;
         if (moveStr.at(0) == 'B' || moveStr.at(0) == 'N' || moveStr.at(0) == 'R' || moveStr.at(0) == 'K' || moveStr.at(0) == 'Q')
@@ -1460,10 +1537,60 @@ public:
         int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
 
         move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
-        std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
+        //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
         return move;
     }
-   
+    bool isGameOver(){}
+    void makeMove(MoveInformation move){
+        //this is ensured to be legal so responsibility of function is to only update the board
+        int enemyColor;
+        if (move.playerColor == white){
+            enemyColor = black; 
+        }
+        if (move.playerColor == black){
+            enemyColor = white; 
+            
+        }
+    
+
+        //CAPTURES/ENPASSANT
+        if (move.isCapture){
+            if (move.isEnpassant){
+            
+            }
+            else{ //traditional captures
+              
+                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
+                //move the player's piece
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            }
+        }
+        //CASTLING
+        else if (move.isKingCastle){
+            if (move.playerColor == white){
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"             
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            }
+            else{
+
+            }
+        }
+        else if (move.isQueenCastle){
+            if (move.playerColor == white){
+
+            }
+            else{
+                
+            }
+        }
+        if (move.isPromotion){}
+        
+        
+        //remove from source
+        
+        
+    }
     void printMove(MoveInformation move)
     {
         int asciiRank = static_cast<int>(move.toRank) - 98;
@@ -1494,7 +1621,9 @@ public:
         }
         std::cout << ss.str();
     }
-
+    Board getBoard(){
+        return board;
+    }
 };
 
 

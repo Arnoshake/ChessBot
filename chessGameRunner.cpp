@@ -22,8 +22,6 @@ int main(){
     Game game;
 
     int turnCount = 0;
-    
-    return 0;
 
     while (1){
         game.displayBoard();
@@ -34,9 +32,8 @@ int main(){
         
         MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
         while (!game.isLegalMove(turnMove)){                                                                            //fix the improper printing order (double printing due to while logic)
-            std::cout<< "This is NOT a legal move! Please try again!   ";
+            std::cout<< "This is NOT a legal move! Please try again!  \n ";
             turnMove = game.parseMove(game.getGameTurn());
-            game.printMove(turnMove);
         }
         
         return 0;

@@ -1265,8 +1265,8 @@ public:
         for (int file = 1; file <= 8; file++){
             int square = (rank-1) * 8 + file-1;
             if (file == 0) std::cout << (rank + 1) << " ";
-            std::cout<< board.getPieceAtSquare(square);
-            continue;
+            // std::cout<< board.getPieceAtSquare(square);
+            // continue;
             if (!board.isOccupied(square))
                     std::cout << '.';
                 else if (board.isWhitePawn(square))
@@ -1450,10 +1450,10 @@ public:
     bool isLegalMove(MoveInformation moveOfInterest){
         std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
         std::cout << std::endl <<std::endl;
-        
+        std::string moveString;
         for (int i = 0; i < legalMoves.size() ; i++){
-            printMove(legalMoves.at(i));
-            std::cout << std::endl;
+            moveString = getMoveString(legalMoves.at(i));
+            std::cout << moveString << std::endl;
         }
         if (isMoveInList(legalMoves,moveOfInterest)){
             return true;
@@ -1464,13 +1464,7 @@ public:
     }
     bool isMoveInList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
         for (const auto& move : moveList) {
-            if (move.fromSquare == targetMove.fromSquare &&
-                move.toSquare == targetMove.toSquare &&
-                move.pieceType == targetMove.pieceType &&
-                move.isPromotion == targetMove.isPromotion &&
-                (!move.isPromotion || move.promotionPiece == targetMove.promotionPiece)) { // last condition ensures that promotion piece only matters if it is a promotion in the first place...
-                return true;
-            }
+            if(targetMove.chessNotation == getMoveString(move) ) return true;
         }
         return false;
     }
@@ -1590,7 +1584,7 @@ public:
             // thing before to square, if capture is 'x'
         }
         // std::cout << moveStr << std::endl;
-        std::cout << "boop";
+        //std::cout << "boop";
         if (moveStr.length() == 1 && ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') )) 
         {
             move.isAmbiguous = true;
@@ -1659,10 +1653,11 @@ public:
         
         
     }
-    void printMove(MoveInformation move)
+    std::string getMoveString(MoveInformation move)
     {
         std::stringstream ss;
-        ss << move.getPieceLetter(move.pieceType);
+        if (!(move.getPieceLetter(move.pieceType) == pawn) ) ss << move.getPieceLetter(move.pieceType);
+        
         if (move.isAmbiguous) ss << move.fromValue;
         
         if (move.isCapture) ss << 'x';
@@ -1672,8 +1667,7 @@ public:
 
         if (move.isCheck) ss << "+";
         if (move.isCheckMate) ss << "#";
-
-        std::cout << ss.str() << std::endl;
+        return ss.str();
     }
     
 };

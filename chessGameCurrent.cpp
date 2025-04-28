@@ -464,493 +464,6 @@ void printBitBoard(uint64_t board){
     std::cout << std::endl;
 }
 
-class Game
-{
-private:
-    Color isWhiteTurn;
-    //bool isGameOver;
-    Board board;
-
-
-public:
-    Game(){
-        board.initializeBoard();
-        boardStates.push_back(board);
-        isWhiteTurn = white;
-        whiteCastlePrivelege = true;
-        blackCastlePrivelege = true;
-    }
-    bool whiteCastlePrivelege;
-    bool blackCastlePrivelege;
-    Board& getBoard(){
-        return board;
-    }
-    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
-    std::vector<Board> boardStates; //holds all board states
-
-    
-    Color& getGameTurn(){
-        return isWhiteTurn;
-    }
-    void switchTurns() {
-        if (getGameTurn() == white){
-            getGameTurn() = black;
-            board.updateFriendlyEnemy(white);
-        }
-        if (getGameTurn() == black){
-            getGameTurn() = white;
-            board.updateFriendlyEnemy(black);
-        }
-    }
-    bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
-        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
-        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(h8) == rook) && ((board.getPieceAtSquare(f8) == none)) && (board.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
-        return false;
-    }
-    bool canQueenCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later 
-        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(a1) == rook) && ((board.getPieceAtSquare(c1) == none)) && (board.getPieceAtSquare(d1) == none) && whiteCastlePrivelege) return true;
-        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(a8) == rook) && ((board.getPieceAtSquare(c8) == none)) && (board.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
-        return false;
-    }
-    void displayBoard()
-    {
-        /*
-            Created 1/29/25 from 3:00 - 4:06PM
-            chatGPT was used for the use of the 1ULL << square function
-
-            Want to improve with using unicode symbols for pieces
-        */
-        char blackPawn = 'p';
-        char blackRook = 'r';
-        char blackKnight = 'n';
-        char blackBishop = 'b';
-        char blackQueen = 'q';
-        char blackKing = 'k';
-
-        char whitePawn = 'P';
-        char whiteRook = 'R';
-        char whiteKnight = 'N';
-        char whiteBishop = 'B';
-        char whiteQueen = 'Q';
-        char whiteKing = 'K';
-
-        
-        // rank = row, file = col
-    for (int rank = 8; rank >= 1; rank--){ // Starts from rank 8 (top) down to rank 1
-        for (int file = 1; file <= 8; file++){
-            int square = (rank-1) * 8 + file-1;
-            if (file == 0) std::cout << (rank + 1) << " ";
-            if (!board.isOccupied(square))
-                    std::cout << '.';
-                else if (board.isWhitePawn(square))
-                    std::cout << whitePawn;
-                else if (board.isWhiteBishop(square))
-                    std::cout << whiteBishop;
-                else if (board.isWhiteRook(square))
-                    std::cout << whiteRook;
-                else if (board.isWhiteKnight(square))
-                    std::cout << whiteKnight;
-                else if (board.isWhiteQueen(square))
-                    std::cout << whiteQueen;
-                else if (board.isWhiteKing(square))
-                    std::cout << whiteKing;
-
-                else if (board.isBlackPawn(square))
-                    std::cout << blackPawn;
-                else if (board.isBlackBishop(square))
-                    std::cout << blackBishop;
-                else if (board.isBlackRook(square))
-                    std::cout << blackRook;
-                else if (board.isBlackKnight(square))
-                    std::cout << blackKnight;
-                else if (board.isBlackQueen(square))
-                    std::cout << blackQueen;
-                else if (board.isBlackKing(square))
-                    std::cout << blackKing;
-        }
-            
-        std::cout << std::endl;
-    }
-    std::cout << "*ABCDEFGH\n";
-    std::cout << std::endl;
-}
-    std::vector<MoveInformation> generateMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
-        board.updateFriendlyEnemy(color);
-        std::vector<MoveInformation> moveListForBoard; 
-        uint64_t possibleMask = 0ULL;
-        while (bitBoard){
-            int fromSquare = __builtin_ctzll(bitBoard);  // finds the LSB that is set to one
-            switch(pieceType){
-                case pawn:
-                    possibleMask= board.getPawnMask(fromSquare,color);
-                    break;
-                case knight:
-                    possibleMask = board.getKnightMask(fromSquare);
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case bishop:
-                    possibleMask = get_bishop_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-        
-                    break;
-                case rook:
-                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-                  
-                    break;
-                case queen:
-                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares() ) | get_bishop_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case king:
-                    possibleMask = board.getKingMask(fromSquare);
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case none:
-                    break;
-                
-            }
-        
-            while (possibleMask){ //for each possible destination (set bit in possible mask)
-                int destination = __builtin_ctzll(possibleMask); //iterate to the first set bit/piece on the board
-
-                MoveInformation legalMove;
-                //generate the attributes of the move
-                legalMove.pieceType = pieceType;
-                legalMove.fromSquare = fromSquare;
-                legalMove.toSquare = destination;
-
-                legalMove.toFile = 'a' + (destination % 8) ;
-                legalMove.toRank = '1' + (destination / 8 );
-                //now grab information from board at the destination
-
-                //captures
-                if (board.getPieceAtSquare(destination) == none){
-                    legalMove.isCapture = false;
-                }
-                else{
-                    legalMove.isCapture = true;
-                    legalMove.capturedPiece = board.getPieceAtSquare(destination);
-                }
-                //castling
-                if (white) {
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == h1 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == a1 ) legalMove.isQueenCastle = true;
-                }
-                else{
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == h8 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == a8 ) legalMove.isQueenCastle = true;
-                }
-
-                //promotions
-                if (white) { //must add each promotional piece
-                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) )legalMove.isPromotion = true;
-                    
-                }
-                else{   //must add each promotional piece
-                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ) legalMove.isPromotion = true;
-                }
-                
-                //en passant
-                if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
-
-                if (legalMove.isPromotion){ //add move for each legal move added
-                    legalMove.pieceType = bishop;
-                    moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = rook;
-                    moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = queen;
-                    moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = knight;
-                    moveListForBoard.push_back(legalMove);
-                }
-                else{
-                moveListForBoard.push_back(legalMove);
-                }
-                possibleMask &= (possibleMask - 1); //clear the bit as it is done with
-            }
-
-            bitBoard &= (bitBoard - 1); //clears the LSB.. cool trick!
-        }
-        return moveListForBoard;
-
-    }
-    std::vector<MoveInformation> generateLegalMoves(int color){ // --> need to add castles
-        std::vector<MoveInformation> allLegalMoves;
-        std::vector<MoveInformation> movesToAdd;
-        if (color == white){
-            movesToAdd = generateMovesFromBitboard(board.getWhitePawn(),pawn,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getWhiteKnight(),knight,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getWhiteBishop(),bishop,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getWhiteRook(),rook,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getWhiteQueen(),queen,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            //if (canKingCastle(white));                      //HOW TO ADD MOVE?
-        }
-        else{
-            movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getBlackKnight(),knight,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getBlackBishop(),bishop,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getBlackRook(),rook,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getBlackQueen(),queen,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-        }
-        return allLegalMoves;
-    }
-    bool isLegalMove(MoveInformation moveOfInterest){
-        std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
-        std::cout << std::endl <<std::endl;
-        
-        for (int i = 0; i < legalMoves.size() ; i++){
-            printMove(legalMoves.at(i));
-            std::cout << std::endl;
-        }
-        if (isMoveInList(legalMoves,moveOfInterest)){
-            return true;
-        }
-        
-        return false;
-        
-    }
-    bool isMoveInList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
-        for (const auto& move : moveList) {
-            if (move.fromSquare == targetMove.fromSquare &&
-                move.toSquare == targetMove.toSquare &&
-                move.pieceType == targetMove.pieceType &&
-                move.isPromotion == targetMove.isPromotion &&
-                (!move.isPromotion || move.promotionPiece == targetMove.promotionPiece)) { // last condition ensures that promotion piece only matters if it is a promotion in the first place...
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    MoveInformation parseMove(Color playerColor)
-    {
-        std::string lineArg;
-        std::getline(std::cin, lineArg);
-        std::string moveStr = lineArg; // will be editing this
-
-        MoveInformation move;
-
-        move.chessNotation = lineArg;
-        // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
-        move.isCapture = moveStr.find('x') != std::string::npos;
-        move.isPromotion = moveStr.find('=') != std::string::npos;
-        move.isCheck = moveStr.find('+') != std::string::npos;
-        move.isCheckMate = moveStr.find('#') != std::string::npos;
-        move.isKingCastle = (moveStr == "O-O"); 
-        move.isQueenCastle = (moveStr == "O-O-O");
-
-        if (move.isKingCastle){
-            if (playerColor == white){
-                move.fromSquare = e1;
-                move.toSquare = g1;
-                return move;
-            }
-            else if (playerColor == black){
-                move.fromSquare = e8;
-                move.toSquare = g8;
-                return move;
-            }
-        }
-        else if (move.isQueenCastle){
-            if (playerColor == white){
-                move.fromSquare = e1;
-                move.toSquare = c1;
-                return move;
-            }
-            else if (playerColor == black){
-                move.fromSquare = e8;
-                move.toSquare = c8;
-                return move;
-            }
-        }
-        
-        move.isAmbiguous = false;
-        // std::cout << moveStr << std::endl;
-        switch (moveStr.at(0)){ //piece type
-
-            case 'B':
-                move.pieceType = bishop;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'N':
-                move.pieceType = knight;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'R':
-                move.pieceType = rook;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'K':
-                move.pieceType = king;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'Q':
-                move.pieceType = queen;
-                moveStr = moveStr.substr(1);
-                break;
-            default:
-                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') ){
-                    move.pieceType = pawn;
-                }
-                else{
-                    move.pieceType= none;
-                }
-                break;
-        }
-
-        // std::cout << moveStr << std::endl;
-
-        if (move.isCheck || move.isCheckMate)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-        }
-        // std::cout << moveStr << std::endl;
-        if (move.isPromotion)
-        {
-            switch (moveStr.at(moveStr.length() - 1) ){
-                case 'B':
-                    move.promotionPiece = bishop;
-                    break;
-                case 'N':
-                    move.promotionPiece = knight;
-                    break;
-                case 'R':
-                    move.promotionPiece = rook;
-                    break;
-                case 'Q':
-                    move.promotionPiece = queen;
-                    break;
-    
-            }
-            moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
-        }
-
-        //std::cout << moveStr << std::endl;
-        // the last thing in the move string at this point must be the "to" information
-        move.toRank = moveStr.at(moveStr.length() - 1);
-        move.toFile = moveStr.at(moveStr.length() - 2);
-        moveStr = moveStr.substr(0, moveStr.length() - 2);
-        // std::cout << moveStr << std::endl;
-        if (move.isCapture)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-            // thing before to square, if capture is 'x'
-        }
-        // std::cout << moveStr << std::endl;
-        std::cout << "boop";
-        if (moveStr.length() == 1 && ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') )) 
-        {
-            move.isAmbiguous = true;
-            move.fromValue = moveStr.at(0);
-        }
-    
-        // std::cout << moveStr << std::endl;
-
-        // square = File * 8 + Rank
-        // a = 1
-        // rank = numbers, File == files
-        
-        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
-        //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
-        return move;
-    }
-    //bool isGameOver(){}
-    void makeMove(MoveInformation move){
-        //this is ensured to be legal so responsibility of function is to only update the board
-        Color enemyColor;
-        if (move.playerColor == white){
-            enemyColor = black; 
-        }
-        if (move.playerColor == black){
-            enemyColor = white; 
-            
-        }
-    
-
-        //CAPTURES/ENPASSANT
-        if (move.isCapture){
-            if (move.isEnpassant){
-            
-            }
-            else{ //traditional captures
-              
-                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
-                //move the player's piece
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
-            }
-        }
-        //CASTLING
-        else if (move.isKingCastle){
-            if (move.playerColor == white){
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"             
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
-            }
-            else{
-
-            }
-        }
-        else if (move.isQueenCastle){
-            if (move.playerColor == white){
-
-            }
-            else{
-                
-            }
-        }
-        if (move.isPromotion){}
-        
-        
-        //remove from source
-        
-        
-    }
-    void printMove(MoveInformation move)
-    {
-        std::stringstream ss;
-        ss << move.getPieceLetter(move.pieceType);
-        if (move.isAmbiguous) ss << move.fromValue;
-        
-        if (move.isCapture) ss << 'x';
-        
-        ss << move.toFile << move.toRank;
-        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
-
-        if (move.isCheck) ss << "+";
-        if (move.isCheckMate) ss << "#";
-
-        std::cout << ss.str() << std::endl;
-    }
-    
-};
-
 class Board{
 private:
     
@@ -1673,6 +1186,494 @@ class MoveInformation{
             char rank = '1' + (square / 8); // '1' to '8'
             return std::string(1, file) + std::string(1, rank);
         }   
+};
+
+
+class Game
+{
+private:
+    Color isWhiteTurn;
+    //bool isGameOver;
+    Board board;
+
+
+public:
+    Game(){
+        board.initializeBoard();
+        boardStates.push_back(board);
+        isWhiteTurn = white;
+        whiteCastlePrivelege = true;
+        blackCastlePrivelege = true;
+    }
+    bool whiteCastlePrivelege;
+    bool blackCastlePrivelege;
+    Board& getBoard(){
+        return board;
+    }
+    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
+    std::vector<Board> boardStates; //holds all board states
+
+    
+    Color& getGameTurn(){
+        return isWhiteTurn;
+    }
+    void switchTurns() {
+        if (getGameTurn() == white){
+            getGameTurn() = black;
+            board.updateFriendlyEnemy(white);
+        }
+        if (getGameTurn() == black){
+            getGameTurn() = white;
+            board.updateFriendlyEnemy(black);
+        }
+    }
+    bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
+        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
+        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(h8) == rook) && ((board.getPieceAtSquare(f8) == none)) && (board.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
+        return false;
+    }
+    bool canQueenCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later 
+        if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(a1) == rook) && ((board.getPieceAtSquare(c1) == none)) && (board.getPieceAtSquare(d1) == none) && whiteCastlePrivelege) return true;
+        if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(a8) == rook) && ((board.getPieceAtSquare(c8) == none)) && (board.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
+        return false;
+    }
+    void displayBoard()
+    {
+        /*
+            Created 1/29/25 from 3:00 - 4:06PM
+            chatGPT was used for the use of the 1ULL << square function
+
+            Want to improve with using unicode symbols for pieces
+        */
+        char blackPawn = 'p';
+        char blackRook = 'r';
+        char blackKnight = 'n';
+        char blackBishop = 'b';
+        char blackQueen = 'q';
+        char blackKing = 'k';
+
+        char whitePawn = 'P';
+        char whiteRook = 'R';
+        char whiteKnight = 'N';
+        char whiteBishop = 'B';
+        char whiteQueen = 'Q';
+        char whiteKing = 'K';
+
+        
+        // rank = row, file = col
+    for (int rank = 8; rank >= 1; rank--){ // Starts from rank 8 (top) down to rank 1
+        for (int file = 1; file <= 8; file++){
+            int square = (rank-1) * 8 + file-1;
+            if (file == 0) std::cout << (rank + 1) << " ";
+            if (!board.isOccupied(square))
+                    std::cout << '.';
+                else if (board.isWhitePawn(square))
+                    std::cout << whitePawn;
+                else if (board.isWhiteBishop(square))
+                    std::cout << whiteBishop;
+                else if (board.isWhiteRook(square))
+                    std::cout << whiteRook;
+                else if (board.isWhiteKnight(square))
+                    std::cout << whiteKnight;
+                else if (board.isWhiteQueen(square))
+                    std::cout << whiteQueen;
+                else if (board.isWhiteKing(square))
+                    std::cout << whiteKing;
+
+                else if (board.isBlackPawn(square))
+                    std::cout << blackPawn;
+                else if (board.isBlackBishop(square))
+                    std::cout << blackBishop;
+                else if (board.isBlackRook(square))
+                    std::cout << blackRook;
+                else if (board.isBlackKnight(square))
+                    std::cout << blackKnight;
+                else if (board.isBlackQueen(square))
+                    std::cout << blackQueen;
+                else if (board.isBlackKing(square))
+                    std::cout << blackKing;
+        }
+            
+        std::cout << std::endl;
+    }
+    std::cout << "*ABCDEFGH\n";
+    std::cout << std::endl;
+}
+    std::vector<MoveInformation> generateMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
+        board.updateFriendlyEnemy(color);
+        std::vector<MoveInformation> moveListForBoard; 
+        uint64_t possibleMask = 0ULL;
+        while (bitBoard){
+            int fromSquare = __builtin_ctzll(bitBoard);  // finds the LSB that is set to one
+            switch(pieceType){
+                case pawn:
+                    possibleMask= board.getPawnMask(fromSquare,color);
+                    break;
+                case knight:
+                    possibleMask = board.getKnightMask(fromSquare);
+                    possibleMask &= ~board.getFriendlyPieces();
+                    break;
+                case bishop:
+                    possibleMask = get_bishop_attacks(fromSquare,board.getOccupiedSquares());
+                    possibleMask &= ~board.getFriendlyPieces();
+        
+                    break;
+                case rook:
+                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares());
+                    possibleMask &= ~board.getFriendlyPieces();
+                  
+                    break;
+                case queen:
+                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares() ) | get_bishop_attacks(fromSquare,board.getOccupiedSquares());
+                    possibleMask &= ~board.getFriendlyPieces();
+                    break;
+                case king:
+                    possibleMask = board.getKingMask(fromSquare);
+                    possibleMask &= ~board.getFriendlyPieces();
+                    break;
+                case none:
+                    break;
+                
+            }
+        
+            while (possibleMask){ //for each possible destination (set bit in possible mask)
+                int destination = __builtin_ctzll(possibleMask); //iterate to the first set bit/piece on the board
+
+                MoveInformation legalMove;
+                //generate the attributes of the move
+                legalMove.pieceType = pieceType;
+                legalMove.fromSquare = fromSquare;
+                legalMove.toSquare = destination;
+
+                legalMove.toFile = 'a' + (destination % 8) ;
+                legalMove.toRank = '1' + (destination / 8 );
+                //now grab information from board at the destination
+
+                //captures
+                if (board.getPieceAtSquare(destination) == none){
+                    legalMove.isCapture = false;
+                }
+                else{
+                    legalMove.isCapture = true;
+                    legalMove.capturedPiece = board.getPieceAtSquare(destination);
+                }
+                //castling
+                if (white) {
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == h1 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == a1 ) legalMove.isQueenCastle = true;
+                }
+                else{
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == h8 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == a8 ) legalMove.isQueenCastle = true;
+                }
+
+                //promotions
+                if (white) { //must add each promotional piece
+                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) )legalMove.isPromotion = true;
+                    
+                }
+                else{   //must add each promotional piece
+                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ) legalMove.isPromotion = true;
+                }
+                
+                //en passant
+                if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
+
+                if (legalMove.isPromotion){ //add move for each legal move added
+                    legalMove.pieceType = bishop;
+                    moveListForBoard.push_back(legalMove);
+                    legalMove.pieceType = rook;
+                    moveListForBoard.push_back(legalMove);
+                    legalMove.pieceType = queen;
+                    moveListForBoard.push_back(legalMove);
+                    legalMove.pieceType = knight;
+                    moveListForBoard.push_back(legalMove);
+                }
+                else{
+                moveListForBoard.push_back(legalMove);
+                }
+                possibleMask &= (possibleMask - 1); //clear the bit as it is done with
+            }
+
+            bitBoard &= (bitBoard - 1); //clears the LSB.. cool trick!
+        }
+        return moveListForBoard;
+
+    }
+    std::vector<MoveInformation> generateLegalMoves(int color){ // --> need to add castles
+        std::vector<MoveInformation> allLegalMoves;
+        std::vector<MoveInformation> movesToAdd;
+        if (color == white){
+            movesToAdd = generateMovesFromBitboard(board.getWhitePawn(),pawn,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteKnight(),knight,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteBishop(),bishop,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteRook(),rook,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteQueen(),queen,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            //if (canKingCastle(white));                      //HOW TO ADD MOVE?
+        }
+        else{
+            movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackKnight(),knight,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackBishop(),bishop,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackRook(),rook,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackQueen(),queen,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        }
+        return allLegalMoves;
+    }
+    bool isLegalMove(MoveInformation moveOfInterest){
+        std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
+        std::cout << std::endl <<std::endl;
+        
+        for (int i = 0; i < legalMoves.size() ; i++){
+            printMove(legalMoves.at(i));
+            std::cout << std::endl;
+        }
+        if (isMoveInList(legalMoves,moveOfInterest)){
+            return true;
+        }
+        
+        return false;
+        
+    }
+    bool isMoveInList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
+        for (const auto& move : moveList) {
+            if (move.fromSquare == targetMove.fromSquare &&
+                move.toSquare == targetMove.toSquare &&
+                move.pieceType == targetMove.pieceType &&
+                move.isPromotion == targetMove.isPromotion &&
+                (!move.isPromotion || move.promotionPiece == targetMove.promotionPiece)) { // last condition ensures that promotion piece only matters if it is a promotion in the first place...
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    MoveInformation parseMove(Color playerColor)
+    {
+        std::string lineArg;
+        std::getline(std::cin, lineArg);
+        std::string moveStr = lineArg; // will be editing this
+
+        MoveInformation move;
+
+        move.chessNotation = lineArg;
+        // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
+        move.isCapture = moveStr.find('x') != std::string::npos;
+        move.isPromotion = moveStr.find('=') != std::string::npos;
+        move.isCheck = moveStr.find('+') != std::string::npos;
+        move.isCheckMate = moveStr.find('#') != std::string::npos;
+        move.isKingCastle = (moveStr == "O-O"); 
+        move.isQueenCastle = (moveStr == "O-O-O");
+
+        if (move.isKingCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = g1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = g8;
+                return move;
+            }
+        }
+        else if (move.isQueenCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = c1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = c8;
+                return move;
+            }
+        }
+        
+        move.isAmbiguous = false;
+        // std::cout << moveStr << std::endl;
+        switch (moveStr.at(0)){ //piece type
+
+            case 'B':
+                move.pieceType = bishop;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'N':
+                move.pieceType = knight;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'R':
+                move.pieceType = rook;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'K':
+                move.pieceType = king;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'Q':
+                move.pieceType = queen;
+                moveStr = moveStr.substr(1);
+                break;
+            default:
+                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') ){
+                    move.pieceType = pawn;
+                }
+                else{
+                    move.pieceType= none;
+                }
+                break;
+        }
+
+        // std::cout << moveStr << std::endl;
+
+        if (move.isCheck || move.isCheckMate)
+        {
+            moveStr = moveStr.substr(0, moveStr.length() - 1);
+        }
+        // std::cout << moveStr << std::endl;
+        if (move.isPromotion)
+        {
+            switch (moveStr.at(moveStr.length() - 1) ){
+                case 'B':
+                    move.promotionPiece = bishop;
+                    break;
+                case 'N':
+                    move.promotionPiece = knight;
+                    break;
+                case 'R':
+                    move.promotionPiece = rook;
+                    break;
+                case 'Q':
+                    move.promotionPiece = queen;
+                    break;
+    
+            }
+            moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
+        }
+
+        //std::cout << moveStr << std::endl;
+        // the last thing in the move string at this point must be the "to" information
+        move.toRank = moveStr.at(moveStr.length() - 1);
+        move.toFile = moveStr.at(moveStr.length() - 2);
+        moveStr = moveStr.substr(0, moveStr.length() - 2);
+        // std::cout << moveStr << std::endl;
+        if (move.isCapture)
+        {
+            moveStr = moveStr.substr(0, moveStr.length() - 1);
+            // thing before to square, if capture is 'x'
+        }
+        // std::cout << moveStr << std::endl;
+        std::cout << "boop";
+        if (moveStr.length() == 1 && ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') )) 
+        {
+            move.isAmbiguous = true;
+            move.fromValue = moveStr.at(0);
+        }
+    
+        // std::cout << moveStr << std::endl;
+
+        // square = File * 8 + Rank
+        // a = 1
+        // rank = numbers, File == files
+        
+        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
+        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
+        //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
+        return move;
+    }
+    //bool isGameOver(){}
+    void makeMove(MoveInformation move){
+        //this is ensured to be legal so responsibility of function is to only update the board
+        Color enemyColor;
+        if (move.playerColor == white){
+            enemyColor = black; 
+        }
+        if (move.playerColor == black){
+            enemyColor = white; 
+            
+        }
+    
+
+        //CAPTURES/ENPASSANT
+        if (move.isCapture){
+            if (move.isEnpassant){
+            
+            }
+            else{ //traditional captures
+              
+                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
+                //move the player's piece
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            }
+        }
+        //CASTLING
+        else if (move.isKingCastle){
+            if (move.playerColor == white){
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"             
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            }
+            else{
+
+            }
+        }
+        else if (move.isQueenCastle){
+            if (move.playerColor == white){
+
+            }
+            else{
+                
+            }
+        }
+        if (move.isPromotion){}
+        
+        
+        //remove from source
+        
+        
+    }
+    void printMove(MoveInformation move)
+    {
+        std::stringstream ss;
+        ss << move.getPieceLetter(move.pieceType);
+        if (move.isAmbiguous) ss << move.fromValue;
+        
+        if (move.isCapture) ss << 'x';
+        
+        ss << move.toFile << move.toRank;
+        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
+
+        if (move.isCheck) ss << "+";
+        if (move.isCheckMate) ss << "#";
+
+        std::cout << ss.str() << std::endl;
+    }
+    
 };
 
 

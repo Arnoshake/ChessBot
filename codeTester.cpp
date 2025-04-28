@@ -22,6 +22,7 @@ int main(){
     Game game;
     game.getBoard().removePiece(white,pawn,a2);
     game.displayBoard();
+    printBitBoard(game.getBoard().getOccupiedSquares() );
   
     // Board test;
     // test.addPiece(white,pawn,a2);

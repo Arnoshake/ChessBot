@@ -1,7 +1,13 @@
-MOVE GENERATION:
-MAKE PAWN STRUCTURE AND POSSIBLE MOVES
+Fix the use of enum as variables instead of int
+
+Ensure that legal move generation works
+
+ensure that inputting moves works
+
+ensure that making a move works
 
 
 
+GOAL: Finish the base game by first final (hard)
 
-Scale fromPiece methods to bitboards
+GOAL: Have a working bot by Laila finishing school (also hard)

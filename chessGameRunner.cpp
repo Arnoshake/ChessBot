@@ -22,29 +22,38 @@ int main(){
     Game game;
 
     int turnCount = 0;
+    
+    return 0;
+
     while (1){
         game.displayBoard();
-        std::cout << "Turn " << turnCount - 1 << ": It is *";
+        std::cout << "Turn " << turnCount + 1 << ": It is *";
         if (game.getGameTurn() ) std::cout << "WHITE's* ";
         else std::cout <<"BLACK's*";
-        std::cout << "turn!\n Please enter your move (alg chess notation)\n";
+        std::cout << "turn!\n Please enter your move (alg chess notation): ";
+        
         MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
-        while (!game.isLegalMove(turnMove)){
-            std::cout<< "This is NOT a legal move! Please try again! \n";
+        while (!game.isLegalMove(turnMove)){                                                                            //fix the improper printing order (double printing due to while logic)
+            std::cout<< "This is NOT a legal move! Please try again!   ";
             turnMove = game.parseMove(game.getGameTurn());
+            game.printMove(turnMove);
         }
         
-        
+        return 0;
         game.makeMove(turnMove);
         game.moveList.push_back(turnMove);
         game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
 
-        if (game.isGameOver() ) break;
+       // if (game.isGameOver() ) break;
 
         game.switchTurns();
         turnCount++;
     }
-    std::cout << "Game over!\n"; //add dynamic White vs Black win message
+    std::cout << "\nGame over!";
+    //ADD DYNAMIC MESSAGING FOR STALEMATES/TIES
+    if (game.getGameTurn()) std::cout << " White Wins!\n";
+    else if (game.getGameTurn()) std::cout << " Black Wins!\n";
+
     return 0;
 }
 

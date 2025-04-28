@@ -653,3 +653,34 @@ uint64_t getRelevantMoveMask(int fromSquare, char pieceType, Board state ){
 //     return kingAttack;
 // }
 
+
+
+void printMove(MoveInformation move)
+    {
+        int asciiRank = static_cast<int>(move.toRank) - 98;
+        // above for testing
+
+        std::stringstream ss;
+        ss << "MOVE INFORMATION" << std::endl;
+        ss << "Piece: " << move.pieceType << std::endl;
+        if (move.isAmbiguous)
+            ss << "From: " << move.fromValue << std::endl;
+        ss << "To: " << move.toFile << move.toRank << "  (" << move.toSquare << ") | " << std::endl;
+
+        ss << std::endl
+           << std::endl
+           << "MOVE STATUS" << std::endl;
+        ss << "isAmbiguous: " << move.isAmbiguous << std::endl
+           << "isCapture: " << move.isCapture << std::endl
+           << "isCheck: " << move.isCheck << std::endl
+           << "isCheckMate: " << move.isCheckMate << std::endl
+           << std::endl;
+        ss << "isKingCastle: " << move.isKingCastle << std::endl
+           << "isQueenCastle: " << move.isQueenCastle << std::endl;
+        ss << "isPromotion: " << move.isPromotion << std::endl;
+        if (move.isPromotion)
+        {
+            ss << "Promotion Piece: " << move.promotionPiece << std::endl;
+        }
+        std::cout << ss.str();
+    }

@@ -971,7 +971,7 @@ public:
                     break;
             }
         }
-        set_bit(getOccupiedSquares(),square);
+        pop_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
     void updateFriendlyEnemy(Color color){
@@ -985,12 +985,12 @@ public:
         }
     }
     Piece getPieceAtSquare(int square){
-        if ( (blackPawns | whitePawns ) & (1 << square) ) return pawn;
-        if ( (blackKnights | whiteKnights ) & (1 << square) ) return knight;
-        if ( (blackBishops | whiteBishops ) & (1 << square) ) return bishop;
-        if ( (blackRooks | whiteRooks ) & (1 << square) ) return rook;
-        if ( (blackQueens | whiteQueens ) & (1 << square) ) return queen;
-        if ( (blackKings | whiteKings ) & (1 << square) ) return king;
+        if ( (blackPawns | whitePawns ) & (1ULL << square) ) return pawn;
+        if ( (blackKnights | whiteKnights ) & (1ULL << square) ) return knight;
+        if ( (blackBishops | whiteBishops ) & (1ULL << square) ) return bishop;
+        if ( (blackRooks | whiteRooks ) & (1ULL << square) ) return rook;
+        if ( (blackQueens | whiteQueens ) & (1ULL << square) ) return queen;
+        if ( (blackKings | whiteKings ) & (1ULL << square) ) return king;
 
         return none;
     }
@@ -1265,6 +1265,8 @@ public:
         for (int file = 1; file <= 8; file++){
             int square = (rank-1) * 8 + file-1;
             if (file == 0) std::cout << (rank + 1) << " ";
+            std::cout<< board.getPieceAtSquare(square);
+            continue;
             if (!board.isOccupied(square))
                     std::cout << '.';
                 else if (board.isWhitePawn(square))

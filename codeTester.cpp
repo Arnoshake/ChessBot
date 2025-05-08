@@ -20,15 +20,30 @@ int main(){
 
     std::cout << "Let's Test Chess!\n";
     Game game;
+    while (1){
+        //check if game is over...
 
-    game.displayBoard();
+        //white
+        game.displayBoard();
+        std::vector < MoveInformation > possibleMoves = game.generateLegalMoves(game.getGameTurn());
+        for(int i = 0; i <possibleMoves.size();i++){
+            std::cout << game.getMoveString(possibleMoves.at(i)) << ", ";
+        }
+        std::cout <<std::endl;
+        game.takeGameHalfTurn(game.getGameTurn());
+        game.switchTurns();
+        std::cout << "XZYColor: " << game.getGameTurn() << std::endl;
+        game.displayBoard();
+        possibleMoves = game.generateLegalMoves(game.getGameTurn());
+        for(int i = 0; i <possibleMoves.size();i++){
+            std::cout << game.getMoveString(possibleMoves.at(i)) << ", ";
+        }
+        std::cout <<std::endl;
+        game.takeGameHalfTurn(game.getGameTurn());
+        game.switchTurns();
 
-
-    std::vector<MoveInformation> possibleLegalMoves = game.generateLegalMoves(white);
-    for (int i = 0; i < possibleLegalMoves.size();i++){
-        game.printMove( possibleLegalMoves.at(i) ) ;
     }
-
+    
     return 0;
 }
 

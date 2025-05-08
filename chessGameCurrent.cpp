@@ -435,12 +435,19 @@ enum Square {
     a8 = 56, b8,  c8,  d8,  e8,  f8,  g8,  h8
 };
 enum Color {
-    black = 0, white = 1
+    black = -1, white = 1
 };
 enum Piece {
     none , pawn, bishop, knight, rook, queen, king
     
 };
+enum boardRep{  //printing --> if black piece, add 6 to integer representation
+    P,B,N,R,Q,K, // white (0-5)
+    p,b,n,r,q,k  // black (6-11)
+};
+std::string kingCastleNotation = "O-O";
+std::string queenCastleNotation = "O-O-O";
+
 
 void printBitBoard(uint64_t board){
     for (int rank = 8; rank >= 1; rank--)
@@ -1195,6 +1202,7 @@ private:
     Color isWhiteTurn;
     //bool isGameOver;
     Board board;
+    int turnCount;
 
 
 public:
@@ -1204,16 +1212,18 @@ public:
         isWhiteTurn = white;
         whiteCastlePrivelege = true;
         blackCastlePrivelege = true;
+        turnCount = 0;
     }
     bool whiteCastlePrivelege;
     bool blackCastlePrivelege;
     Board& getBoard(){
         return board;
     }
+    int getGameTurnCount(){
+        return turnCount;
+    }
     std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
     std::vector<Board> boardStates; //holds all board states
-
-    
     Color& getGameTurn(){
         return isWhiteTurn;
     }
@@ -1221,12 +1231,16 @@ public:
         if (getGameTurn() == white){
             getGameTurn() = black;
             board.updateFriendlyEnemy(white);
+            return;
         }
         if (getGameTurn() == black){
             getGameTurn() = white;
             board.updateFriendlyEnemy(black);
+            return;
         }
     }
+
+
     bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
         if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
         if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(h8) == rook) && ((board.getPieceAtSquare(f8) == none)) && (board.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
@@ -1301,6 +1315,7 @@ public:
     std::cout << "*ABCDEFGH\n";
     std::cout << std::endl;
 }
+    
     std::vector<MoveInformation> generateMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
         board.updateFriendlyEnemy(color);
         std::vector<MoveInformation> moveListForBoard; 
@@ -1370,18 +1385,21 @@ public:
                 }
 
                 //promotions
-                if (white) { //must add each promotional piece
-                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) )legalMove.isPromotion = true;
-                    
+                if (white) { 
+                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) ){
+                        legalMove.isPromotion = true;
+                    }
                 }
-                else{   //must add each promotional piece
-                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ) legalMove.isPromotion = true;
+                else{  
+                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ){
+                        legalMove.isPromotion = true;
+                    }
                 }
                 
                 //en passant
                 if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
 
-                if (legalMove.isPromotion){ //add move for each legal move added
+                if (legalMove.isPromotion){                                 //add move for each legal move added --> need to create a check for check and checkmate
                     legalMove.pieceType = bishop;
                     moveListForBoard.push_back(legalMove);
                     legalMove.pieceType = rook;
@@ -1394,6 +1412,7 @@ public:
                 else{
                 moveListForBoard.push_back(legalMove);
                 }
+                
                 possibleMask &= (possibleMask - 1); //clear the bit as it is done with
             }
 
@@ -1402,6 +1421,7 @@ public:
         return moveListForBoard;
 
     }
+
     std::vector<MoveInformation> generateLegalMoves(int color){ // --> need to add castles
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
@@ -1424,7 +1444,14 @@ public:
             movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            //if (canKingCastle(white));                      //HOW TO ADD MOVE?
+            movesToAdd.clear();
+            if (canKingCastle(white)){
+                movesToAdd.push_back(parseMove(white, "O-O"));
+            }
+            if (canQueenCastle(white)){
+                movesToAdd.push_back(parseMove(white, "O-O-O"));
+            }
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         }
         else{
             movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
@@ -1444,6 +1471,15 @@ public:
 
             movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd.clear();
+            if (canKingCastle(black)){
+                movesToAdd.push_back(parseMove(black, "O-O"));
+            }
+            if (canQueenCastle(black)){
+                movesToAdd.push_back(parseMove(black, "O-O-O"));
+            }
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         }
         return allLegalMoves;
     }
@@ -1455,21 +1491,28 @@ public:
             moveString = getMoveString(legalMoves.at(i));
             std::cout << moveString << std::endl;
         }
-        if (isMoveInList(legalMoves,moveOfInterest)){
+        if (moveIndexInLegalList(legalMoves,moveOfInterest) >= 0){
             return true;
         }
         
         return false;
         
     }
-    bool isMoveInList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
-        for (const auto& move : moveList) {
-            if(targetMove.chessNotation == getMoveString(move) ) return true;
+    
+    int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
+        //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
+        for (int i = 0; i < moveList.size(); i++) {
+            // std::cout << getMoveString(targetMove) << " vs " << getMoveString(moveList.at(i)) << std::endl; testing move find
+            if(targetMove.chessNotation == getMoveString(moveList.at(i)) ){
+                // std::cout << targetMove.fromSquare << " vs " << moveList.at(i).fromSquare; comparing attributes
+                
+                return i;
+            }
         }
-        return false;
+        return -1; //no index for move in list
     }
     
-    MoveInformation parseMove(Color playerColor)
+    MoveInformation parseMove(Color playerColor, std::string chessNotation)
     {
         std::string lineArg;
         std::getline(std::cin, lineArg);
@@ -1603,7 +1646,9 @@ public:
         return move;
     }
     //bool isGameOver(){}
-    void makeMove(MoveInformation move){
+    void makeMove(MoveInformation move){                    //DONE FOR RIGHT NOW... MAY NEED LATER TESTING ONCE GAME IS IN FULL EFFECT
+        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+
         //this is ensured to be legal so responsibility of function is to only update the board
         Color enemyColor;
         if (move.playerColor == white){
@@ -1618,7 +1663,19 @@ public:
         //CAPTURES/ENPASSANT
         if (move.isCapture){
             if (move.isEnpassant){
-            
+                //place piece at en passant square...
+
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
+                //remove pawn that was passant'd
+                int pawnToBeRemoved;
+                //color determines if the piece that jumped is above or behind the pawn
+                if (enemyColor == black) pawnToBeRemoved = move.toSquare + 8;
+                else pawnToBeRemoved = move.toSquare - 8;
+
+                board.removePiece(move.playerColor,pawn, pawnToBeRemoved);
+      
+                //remove piece from origin
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 
             }
             else{ //traditional captures
               
@@ -1629,34 +1686,87 @@ public:
             }
         }
         //CASTLING
-        else if (move.isKingCastle){
+        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
             if (move.playerColor == white){
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"             
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+                board.removePiece(white,king,e1); // "pick it up"             
+                board.addPiece(white,king,g1); // "place it down"
+
+                board.removePiece(white,rook,h1);          
+                board.addPiece(white,rook,f1); 
             }
             else{
-
+                board.removePiece(black,king,e8);              
+                board.addPiece(black,king,g8); 
+                
+                board.removePiece(black,rook,h8);          
+                board.addPiece(black,rook,f8); 
             }
         }
         else if (move.isQueenCastle){
             if (move.playerColor == white){
+                board.removePiece(white,king,e1); // "pick it up"             
+                board.addPiece(white,king,c1); // "place it down"
 
+                board.removePiece(white,rook,a1);          
+                board.addPiece(white,rook,d1); 
             }
             else{
-                
+                board.removePiece(white,king,e8);           
+                board.addPiece(white,king,c8);
+
+                board.removePiece(white,rook,a8);          
+                board.addPiece(white,rook,d8); 
             }
         }
-        if (move.isPromotion){}
+        //PROMOTIONS
+        if (move.isPromotion){
+            board.removePiece(move.playerColor,pawn,move.fromSquare); //all promotions are pawn piece type
+            board.addPiece(move.playerColor,move.promotionPiece,move.toSquare);
+        }
         
+        //regular moves
+        if (move.playerColor == white){
+            getBoard().addPiece(white,move.pieceType,move.toSquare);
+            // displayBoard();
+            getBoard().removePiece(white,move.pieceType,move.fromSquare);
+            // displayBoard();
+        }
+        else{
+            getBoard().addPiece(black,move.pieceType,move.toSquare);
+            //displayBoard();
+            getBoard().removePiece(black,move.pieceType,move.fromSquare);
+            //displayBoard();
+        }
+    
+    }
         
-        //remove from source
+    void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
+
+        std::cout << "Turn " << getGameTurnCount() + 1;
+        std::string gameMoveString;
+        if (turn == white) std::cout << "W. ";
+        else std::cout << "B. ";
         
+        std::cout << "Please make your move! (standard chess notation): ";
+        std::string userInputtedNotation;
+
+        std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(turn);
+
+        MoveInformation userInput = parseMove(turn,userInputtedNotation);
+        int moveIndex = moveIndexInLegalList(possibleLegalMoves,userInput) ;
+        while (moveIndex == -1){ //while move is not in legal move list
+            std::cout<< "Illegal Move! Please try another move!\n";
+            userInput = parseMove(turn,userInputtedNotation );
+        }
         
+        MoveInformation matchingMove;
+        matchingMove = possibleLegalMoves.at(moveIndex);
+        makeMove(matchingMove);
     }
     std::string getMoveString(MoveInformation move)
     {
         std::stringstream ss;
-        if (!(move.getPieceLetter(move.pieceType) == pawn) ) ss << move.getPieceLetter(move.pieceType);
+        if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
         
         if (move.isAmbiguous) ss << move.fromValue;
         

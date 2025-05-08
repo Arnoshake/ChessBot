@@ -1,13 +1,5 @@
-Fix the use of enum as variables instead of int
-
-Ensure that legal move generation works
-
-ensure that inputting moves works
-
-ensure that making a move works
+Need to figure out why all moves are being made from the perspective of white
+need to obviously fix move generation
+need to flesh out all movetypes for making move
 
 
-
-GOAL: Finish the base game by first final (hard)
-
-GOAL: Have a working bot by Laila finishing school (also hard)

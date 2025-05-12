@@ -568,6 +568,7 @@ public:
         enPassantTargetSquare = -1;
     
     };
+    //POSSIBLE CAPTURES/MOVES
     uint64_t possiblePawnMovesBitBoard(){ 
       
         uint64_t pawnBitBoard;
@@ -861,6 +862,7 @@ public:
         return kingAttack;
     }
     
+    //MAKING MOVES
     void addPiece(Color color, int piece, int square){
         if (color){
             switch(piece){
@@ -981,6 +983,102 @@ public:
         pop_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
+    
+    void makeMove(Board board, MoveInformation move){                    //DONE FOR RIGHT NOW... MAY NEED LATER TESTING ONCE GAME IS IN FULL EFFECT
+        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+
+        //this is ensured to be legal so responsibility of function is to only update the board
+        Color enemyColor;
+        if (move.playerColor == white){
+            enemyColor = black; 
+        }
+        if (move.playerColor == black){
+            enemyColor = white; 
+            
+        }
+    
+
+        //CAPTURES/ENPASSANT
+        if (move.isCapture){
+            if (move.isEnpassant){
+                //place piece at en passant square...
+
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
+                //remove pawn that was passant'd
+                int pawnToBeRemoved;
+                //color determines if the piece that jumped is above or behind the pawn
+                if (enemyColor == black) pawnToBeRemoved = move.toSquare + 8;
+                else pawnToBeRemoved = move.toSquare - 8;
+
+                board.removePiece(move.playerColor,pawn, pawnToBeRemoved);
+      
+                //remove piece from origin
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 
+            }
+            else{ //traditional captures
+              
+                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
+                //move the player's piece
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
+                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            }
+        }
+        //CASTLING
+        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
+            if (move.playerColor == white){
+                board.removePiece(white,king,e1); // "pick it up"             
+                board.addPiece(white,king,g1); // "place it down"
+
+                board.removePiece(white,rook,h1);          
+                board.addPiece(white,rook,f1); 
+            }
+            else{
+                board.removePiece(black,king,e8);              
+                board.addPiece(black,king,g8); 
+                
+                board.removePiece(black,rook,h8);          
+                board.addPiece(black,rook,f8); 
+            }
+        }
+        else if (move.isQueenCastle){
+            if (move.playerColor == white){
+                board.removePiece(white,king,e1); // "pick it up"             
+                board.addPiece(white,king,c1); // "place it down"
+
+                board.removePiece(white,rook,a1);          
+                board.addPiece(white,rook,d1); 
+            }
+            else{
+                board.removePiece(white,king,e8);           
+                board.addPiece(white,king,c8);
+
+                board.removePiece(white,rook,a8);          
+                board.addPiece(white,rook,d8); 
+            }
+        }
+        //PROMOTIONS
+        if (move.isPromotion){
+            board.removePiece(move.playerColor,pawn,move.fromSquare); //all promotions are pawn piece type
+            board.addPiece(move.playerColor,move.promotionPiece,move.toSquare);
+        }
+        
+        //regular moves
+        if (move.playerColor == white){
+            board.addPiece(white,move.pieceType,move.toSquare);
+            // displayBoard();
+            board.removePiece(white,move.pieceType,move.fromSquare);
+            // displayBoard();
+        }
+        else{
+            board.addPiece(black,move.pieceType,move.toSquare);
+            //displayBoard();
+            board.removePiece(black,move.pieceType,move.fromSquare);
+            //displayBoard();
+        }
+    
+    } 
+    
+    
     void updateFriendlyEnemy(Color color){
         if (white){
             getFriendlyPieces() = getWhitePieces();
@@ -998,9 +1096,14 @@ public:
         if ( (blackRooks | whiteRooks ) & (1ULL << square) ) return rook;
         if ( (blackQueens | whiteQueens ) & (1ULL << square) ) return queen;
         if ( (blackKings | whiteKings ) & (1ULL << square) ) return king;
-
         return none;
     }
+    
+
+    
+    
+    
+    
     //1 billion helper and bool methods
     int getSideForTurn(){
         if (isWhiteTurn == 1) return 1;
@@ -1421,8 +1524,7 @@ public:
         return moveListForBoard;
 
     }
-
-    std::vector<MoveInformation> generateLegalMoves(int color){ // --> need to add castles
+    std::vector<MoveInformation> generateLegalMoves(int color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
         if (color == white){
@@ -1498,7 +1600,6 @@ public:
         return false;
         
     }
-    
     int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
         //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
         for (int i = 0; i < moveList.size(); i++) {
@@ -1511,7 +1612,6 @@ public:
         }
         return -1; //no index for move in list
     }
-    
     MoveInformation parseMove(Color playerColor, std::string chessNotation)
     {
         std::string lineArg;
@@ -1646,100 +1746,6 @@ public:
         return move;
     }
     //bool isGameOver(){}
-    void makeMove(MoveInformation move){                    //DONE FOR RIGHT NOW... MAY NEED LATER TESTING ONCE GAME IS IN FULL EFFECT
-        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
-
-        //this is ensured to be legal so responsibility of function is to only update the board
-        Color enemyColor;
-        if (move.playerColor == white){
-            enemyColor = black; 
-        }
-        if (move.playerColor == black){
-            enemyColor = white; 
-            
-        }
-    
-
-        //CAPTURES/ENPASSANT
-        if (move.isCapture){
-            if (move.isEnpassant){
-                //place piece at en passant square...
-
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
-                //remove pawn that was passant'd
-                int pawnToBeRemoved;
-                //color determines if the piece that jumped is above or behind the pawn
-                if (enemyColor == black) pawnToBeRemoved = move.toSquare + 8;
-                else pawnToBeRemoved = move.toSquare - 8;
-
-                board.removePiece(move.playerColor,pawn, pawnToBeRemoved);
-      
-                //remove piece from origin
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 
-            }
-            else{ //traditional captures
-              
-                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
-                //move the player's piece
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
-            }
-        }
-        //CASTLING
-        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
-            if (move.playerColor == white){
-                board.removePiece(white,king,e1); // "pick it up"             
-                board.addPiece(white,king,g1); // "place it down"
-
-                board.removePiece(white,rook,h1);          
-                board.addPiece(white,rook,f1); 
-            }
-            else{
-                board.removePiece(black,king,e8);              
-                board.addPiece(black,king,g8); 
-                
-                board.removePiece(black,rook,h8);          
-                board.addPiece(black,rook,f8); 
-            }
-        }
-        else if (move.isQueenCastle){
-            if (move.playerColor == white){
-                board.removePiece(white,king,e1); // "pick it up"             
-                board.addPiece(white,king,c1); // "place it down"
-
-                board.removePiece(white,rook,a1);          
-                board.addPiece(white,rook,d1); 
-            }
-            else{
-                board.removePiece(white,king,e8);           
-                board.addPiece(white,king,c8);
-
-                board.removePiece(white,rook,a8);          
-                board.addPiece(white,rook,d8); 
-            }
-        }
-        //PROMOTIONS
-        if (move.isPromotion){
-            board.removePiece(move.playerColor,pawn,move.fromSquare); //all promotions are pawn piece type
-            board.addPiece(move.playerColor,move.promotionPiece,move.toSquare);
-        }
-        
-        //regular moves
-        if (move.playerColor == white){
-            getBoard().addPiece(white,move.pieceType,move.toSquare);
-            // displayBoard();
-            getBoard().removePiece(white,move.pieceType,move.fromSquare);
-            // displayBoard();
-        }
-        else{
-            getBoard().addPiece(black,move.pieceType,move.toSquare);
-            //displayBoard();
-            getBoard().removePiece(black,move.pieceType,move.fromSquare);
-            //displayBoard();
-        }
-    
-    }
-        
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
 
         std::cout << "Turn " << getGameTurnCount() + 1;
@@ -1761,7 +1767,7 @@ public:
         
         MoveInformation matchingMove;
         matchingMove = possibleLegalMoves.at(moveIndex);
-        makeMove(matchingMove);
+        // makeMove(matchingMove);                                                                      FIXXXX
     }
     std::string getMoveString(MoveInformation move)
     {
@@ -1778,8 +1784,43 @@ public:
         if (move.isCheck) ss << "+";
         if (move.isCheckMate) ss << "#";
         return ss.str();
+    } 
+    bool isCompromisingCheck(Color colorTakingTurn, Board boardState, MoveInformation moveOfInterest){
+        /*
+            Should these check and mate functions be board level or move specific? My gut instinct is move specific as states change through moves. Additionally, this tightens scope of search
+            Player moves are only legal if it doesnt put themselves in check!
+            Moves will always be passed with proper notation which determine if
+        */
+        
+        Board boardstateCopy = getBoard(); //clone/copy of main board
+
+       // makeMove( moveOfInterest );  //need to pass boards explicitly, otherwise operates by default on game board                FIXXXXX
+
+        //post move, need to see if the mask of possible attacks overlap with the king --> How to get this master bitboard in the cleanest way possible?
+
     }
-    
+    bool isCheckMate(Color colorTakingTurn, Board boardState, MoveInformation moveOfInterest){
+        if ( isCompromisingCheck(colorTakingTurn,boardState, moveOfInterest) ) {
+            //if the king has no possible moves, then its checkmate!
+        }
+    }
+
+
+
+
 };
 
+
+
+
+/*
+    I need to restructure the object structure of the code.
+
+
+    types of check
+        discoveredChecks/pinning* -->requires the compromisingcheck function
+        
+
+
+*/
 

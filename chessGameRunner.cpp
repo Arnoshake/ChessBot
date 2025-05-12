@@ -30,15 +30,15 @@ int main(){
         else std::cout <<"BLACK's*";
         std::cout << "turn!\n Please enter your move (alg chess notation): ";
         
-        MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
-        while (!game.isLegalMove(turnMove)){                                                                            //fix the improper printing order (double printing due to while logic)
-            std::cout<< "This is NOT a legal move! Please try again!  \n ";
-            turnMove = game.parseMove(game.getGameTurn());
-        }
+        //MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
+        // while (!game.isLegalMove(turnMove)){         FIXXXXX                                                                   //fix the improper printing order (double printing due to while logic)
+        //     std::cout<< "This is NOT a legal move! Please try again!  \n ";
+        //     turnMove = game.parseMove(game.getGameTurn());
+        // }
         
         return 0;
-        game.makeMove(turnMove);
-        game.moveList.push_back(turnMove);
+        //game.makeMove(turnMove);
+        // game.moveList.push_back(turnMove); FIXXXX
         game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
 
        // if (game.isGameOver() ) break;

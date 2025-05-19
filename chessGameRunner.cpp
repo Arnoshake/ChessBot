@@ -22,13 +22,28 @@ int main(){
     Game game;
 
     int turnCount = 0;
+    game.displayBoardForUser();
+    MoveInformation turnMove = game.parseMove(white);
+    std::vector <MoveInformation> moveList = game.generateLegalMoves(white);
+    
+    for(int i = 0; i <moveList.size();i++){
+        std::cout << moveList.at(i).chessNotation << ", ";
+    }
+    std::cout << std::endl;
+    game.getBoard().makeMove(game.getBoard(),turnMove);
+    std::cout <<"outside funct \n";
+    game.displayBoardForUser();
+    game.getBoard().undoMove(game.getBoard(),turnMove);
+    game.displayBoardForUser();
+    return 0;
+}
 
-    while (1){
-        game.displayBoardForUser();
-        std::cout << "Turn " << turnCount + 1 << ": It is *";
-        if (game.getColorOfPlayerTakingTurn() ) std::cout << "WHITE's* ";
-        else std::cout <<"BLACK's*";
-        std::cout << "turn!\n Please enter your move (alg chess notation): ";
+    // while (1){
+    //     game.displayBoardForUser();
+    //     std::cout << "Turn " << turnCount + 1 << ": It is *";
+    //     if (game.getColorOfPlayerTakingTurn() ) std::cout << "WHITE's* ";
+    //     else std::cout <<"BLACK's*";
+    //     std::cout << "turn!\n Please enter your move (alg chess notation): ";
         
         //MoveInformation turnMove = game.parseMove(game.getGameTurn()); // need to handle improper move entry!
         // while (!game.isLegalMove(turnMove)){         FIXXXXX                                                                   //fix the improper printing order (double printing due to while logic)
@@ -39,20 +54,20 @@ int main(){
         
         //game.makeMove(turnMove);
         // game.moveList.push_back(turnMove); FIXXXX
-        game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
+//         game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
 
-       // if (game.isGameOver() ) break;
+//        // if (game.isGameOver() ) break;
 
-        game.switchTurns();
-        turnCount++;
-    }
-    std::cout << "\nGame over!"; // game object has flags for checkmate and stalemate, game over function will check these
-    //ADD DYNAMIC MESSAGING FOR STALEMATES/TIES
-    if (game.getColorOfPlayerTakingTurn()) std::cout << " White Wins!\n";
-    else if (game.getColorOfPlayerTakingTurn()) std::cout << " Black Wins!\n";
+//         game.switchTurns();
+//         turnCount++;
+//     }
+//     std::cout << "\nGame over!"; // game object has flags for checkmate and stalemate, game over function will check these
+//     //ADD DYNAMIC MESSAGING FOR STALEMATES/TIES
+//     if (game.getColorOfPlayerTakingTurn()) std::cout << " White Wins!\n";
+//     else if (game.getColorOfPlayerTakingTurn()) std::cout << " Black Wins!\n";
 
-    return 0;
-}
+//     return 0;
+// }
 
 /*
     //CODE FOR CREATING LOOKUP TABLE FOR KNIGHTS, KINGS

@@ -15,3 +15,10 @@ Need to review and create helper methods and restructure for proper encapsulatio
 Need to get a clear understanding of checklist
 
 
+
+
+
+
+
+IMMEDIATE TO DO NEXT:
+isKingInCheck(Color x)

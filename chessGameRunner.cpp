@@ -24,9 +24,9 @@ int main(){
     int turnCount = 0;
 
     while (1){
-        game.displayBoard();
+        game.displayBoardForUser();
         std::cout << "Turn " << turnCount + 1 << ": It is *";
-        if (game.getGameTurn() ) std::cout << "WHITE's* ";
+        if (game.getColorOfPlayerTakingTurn() ) std::cout << "WHITE's* ";
         else std::cout <<"BLACK's*";
         std::cout << "turn!\n Please enter your move (alg chess notation): ";
         
@@ -36,7 +36,7 @@ int main(){
         //     turnMove = game.parseMove(game.getGameTurn());
         // }
         
-        return 0;
+        
         //game.makeMove(turnMove);
         // game.moveList.push_back(turnMove); FIXXXX
         game.boardStates.push_back(game.getBoard()); //add the new boardstate to the history and make the move
@@ -46,10 +46,10 @@ int main(){
         game.switchTurns();
         turnCount++;
     }
-    std::cout << "\nGame over!";
+    std::cout << "\nGame over!"; // game object has flags for checkmate and stalemate, game over function will check these
     //ADD DYNAMIC MESSAGING FOR STALEMATES/TIES
-    if (game.getGameTurn()) std::cout << " White Wins!\n";
-    else if (game.getGameTurn()) std::cout << " Black Wins!\n";
+    if (game.getColorOfPlayerTakingTurn()) std::cout << " White Wins!\n";
+    else if (game.getColorOfPlayerTakingTurn()) std::cout << " Black Wins!\n";
 
     return 0;
 }

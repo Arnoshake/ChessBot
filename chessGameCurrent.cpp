@@ -864,7 +864,7 @@ public:
     
         return kingAttack;
     }
-    
+   //rook, bishop, queen are all covered by the provided get_bishop_attack and get_rook_attack functions 
     //MAKING MOVES...should piece be integer or Piece type
     void addPiece(Color color, int piece, int square){
         if (color){
@@ -1078,6 +1078,98 @@ public:
         }
         
     } 
+    void undoMove(Board board, MoveInformation move){                  
+        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+
+        //this is ensured to be legal so responsibility of function is to only update the board
+        Color enemyColor;
+        if (move.playerColor == white){
+            enemyColor = black; 
+        }
+        if (move.playerColor == black){
+            enemyColor = white; 
+            
+        }
+    
+        
+        //PROMOTIONS
+        if (move.isPromotion){
+            // undoes the actual promotion. The movement that got the pawn to be promoted will be handled in the following bools
+            board.removePiece(move.playerColor,move.promotionPiece,move.toSquare);
+            board.addPiece(move.playerColor,pawn,move.toSquare); //all promotions are pawn piece type
+           
+        }
+        //CAPTURES/ENPASSANT
+        if (move.isCapture){
+            if (move.isEnpassant){
+
+                //remove the piece at en passant square
+                board.removePiece(move.playerColor,pawn,move.toSquare); //toSquare is en Passant square
+                //add at square of origin
+                board.addPiece(move.playerColor,move.pieceType,move.fromSquare);
+                //add pawn that was passant'd (based on color (above/below) )
+                int pawnToBeAddedSquare;
+                if (enemyColor == black) pawnToBeAddedSquare = move.toSquare + 8;
+                else pawnToBeAddedSquare = move.toSquare - 8;
+
+                board.addPiece(move.playerColor,pawn,pawnToBeAddedSquare);
+
+
+
+      
+                return; //enPassant cannot lead to castling, promotion, etc.
+            }
+            else{ //traditional captures
+                //remove the capturing piece
+                board.removePiece(move.playerColor,move.pieceType,move.toSquare);
+                //add the captured piece
+                board.addPiece(enemyColor,move.capturedPiece,move.toSquare);
+                //readd capturing piece @ origin
+                board.addPiece(move.playerColor,move.pieceType,move.fromSquare);
+            }
+        }
+       
+        //CASTLING
+        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
+            if (move.playerColor == white){
+                board.addPiece(white,king,e1);           
+                board.removePiece(white,king,g1);
+
+                board.addPiece(white,rook,h1);          
+                board.removePiece(white,rook,f1); 
+            }
+            else{
+                board.addPiece(black,king,e8);              
+                board.removePiece(black,king,g8); 
+                
+                board.addPiece(black,rook,h8);          
+                board.removePiece(black,rook,f8); 
+            }
+        }
+        else if (move.isQueenCastle){
+            if (move.playerColor == white){
+                board.addPiece(white,king,e1); // "pick it up"             
+                board.removePiece(white,king,c1); // "place it down"
+
+                board.addPiece(white,rook,a1);          
+                board.removePiece(white,rook,d1); 
+            }
+            else{
+                board.addPiece(white,king,e8);           
+                board.removePiece(white,king,c8);
+
+                board.addPiece(white,rook,a8);          
+                board.removePiece(white,rook,d8); 
+            }
+        }
+        //REGULAR MOVES (Passive/NonCapture)
+        else if (move.isCapture == 0){ 
+            board.removePiece(move.playerColor,move.pieceType,move.toSquare); 
+            board.addPiece(move.playerColor,move.pieceType,move.fromSquare); 
+        }
+        
+        
+    } 
     
     
     void updateFriendlyEnemy(Color color){
@@ -1099,11 +1191,6 @@ public:
         if ( (blackKings | whiteKings ) & (1ULL << square) ) return king;
         return none;
     }
-    
-
-    
-    
-    
     
     //1 billion helper and bool methods
     int getSideForTurn(){
@@ -1252,7 +1339,7 @@ class MoveInformation{
         bool isCheck, isCheckMate, isCapture, isAmbiguous, isPromotion, isEnpassant;
         bool isKingCastle, isQueenCastle;
         char toRank, toFile, fromValue;
-        Piece pieceType, promotionPiece, capturedPiece;                 //need to convert character of piece to the enumerated integer version
+        Piece pieceType, promotionPiece, capturedPiece;             
 
         int toSquare;
         int fromSquare;
@@ -1303,42 +1390,44 @@ class MoveInformation{
 class Game
 {
 private:
-    Color isWhiteTurn;
+    Color playerTakingTurnColor;
     //bool isGameOver;
     Board board;
-    int turnCount;
+    int turnCount; //index for move/board history
 
 
 public:
+    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
+    std::vector<Board> boardStates; //holds all board states
+    bool whiteCastlePrivelege;
+    bool blackCastlePrivelege;
     Game(){
         board.initializeBoard();
         boardStates.push_back(board);
-        isWhiteTurn = white;
+        playerTakingTurnColor = white;
         whiteCastlePrivelege = true;
         blackCastlePrivelege = true;
         turnCount = 0;
     }
-    bool whiteCastlePrivelege;
-    bool blackCastlePrivelege;
+    
     Board& getBoard(){
         return board;
     }
     int getGameTurnCount(){
         return turnCount;
     }
-    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
-    std::vector<Board> boardStates; //holds all board states
-    Color& getGameTurn(){
-        return isWhiteTurn;
+    
+    Color& getColorOfPlayerTakingTurn(){
+        return playerTakingTurnColor;
     }
     void switchTurns() {
-        if (getGameTurn() == white){
-            getGameTurn() = black;
+        if (getColorOfPlayerTakingTurn() == white){
+            getColorOfPlayerTakingTurn() = black;
             board.updateFriendlyEnemy(white);
             return;
         }
-        if (getGameTurn() == black){
-            getGameTurn() = white;
+        if (getColorOfPlayerTakingTurn() == black){
+            getColorOfPlayerTakingTurn() = white;
             board.updateFriendlyEnemy(black);
             return;
         }
@@ -1355,7 +1444,7 @@ public:
         if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(a8) == rook) && ((board.getPieceAtSquare(c8) == none)) && (board.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
         return false;
     }
-    void displayBoard()
+    void displayBoardForUser()
     {
         /*
             Created 1/29/25 from 3:00 - 4:06PM
@@ -1420,7 +1509,7 @@ public:
     std::cout << std::endl;
 }
     
-    std::vector<MoveInformation> generateMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
+    std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
         board.updateFriendlyEnemy(color);
         std::vector<MoveInformation> moveListForBoard; 
         uint64_t possibleMask = 0ULL;
@@ -1452,7 +1541,7 @@ public:
                     possibleMask = board.getKingMask(fromSquare);
                     possibleMask &= ~board.getFriendlyPieces();
                     break;
-                case none:
+                case none:  //idealy impossible... if a bit is set, a piece must be present
                     break;
                 
             }
@@ -1479,7 +1568,7 @@ public:
                     legalMove.capturedPiece = board.getPieceAtSquare(destination);
                 }
                 //castling
-                if (white) {
+                if (color == white) { //castling will never be generated from a bitboard. its outside the normal rules for king movement
                     if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == h1 ) legalMove.isKingCastle = true;
                     if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == a1 ) legalMove.isQueenCastle = true;
                 }
@@ -1489,7 +1578,7 @@ public:
                 }
 
                 //promotions
-                if (white) { 
+                if (color == white) { 
                     if ( pieceType == pawn && (destination >= a8 && destination <= h8) ){
                         legalMove.isPromotion = true;
                     }
@@ -1504,13 +1593,13 @@ public:
                 if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
 
                 if (legalMove.isPromotion){                                 //add move for each legal move added --> need to create a check for check and checkmate
-                    legalMove.pieceType = bishop;
+                    legalMove.promotionPiece = bishop;
                     moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = rook;
+                    legalMove.promotionPiece = rook;
                     moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = queen;
+                    legalMove.promotionPiece = queen;
                     moveListForBoard.push_back(legalMove);
-                    legalMove.pieceType = knight;
+                    legalMove.promotionPiece = knight;
                     moveListForBoard.push_back(legalMove);
                 }
                 else{
@@ -1525,29 +1614,29 @@ public:
         return moveListForBoard;
 
     }
-    std::vector<MoveInformation> generateLegalMoves(int color){ 
+    std::vector<MoveInformation> generateLegalMoves(Color color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
         if (color == white){
-            movesToAdd = generateMovesFromBitboard(board.getWhitePawn(),pawn,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhitePawn(),pawn,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getWhiteKnight(),knight,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteKnight(),knight,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getWhiteBishop(),bishop,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteBishop(),bishop,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getWhiteRook(),rook,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteRook(),rook,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getWhiteQueen(),queen,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteQueen(),queen,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getWhiteKing(),king,white);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteKing(),king,white);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd.clear();
+            movesToAdd.clear();                                                             // is this necessary?
             if (canKingCastle(white)){
                 movesToAdd.push_back(parseMove(white, "O-O"));
             }
@@ -1557,22 +1646,22 @@ public:
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         }
         else{
-            movesToAdd = generateMovesFromBitboard(board.getBlackPawn(),pawn,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackPawn(),pawn,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getBlackKnight(),knight,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackKnight(),knight,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getBlackBishop(),bishop,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackBishop(),bishop,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getBlackRook(),rook,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackRook(),rook,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getBlackQueen(),queen,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackQueen(),queen,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generateMovesFromBitboard(board.getBlackKing(),king,black);
+            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackKing(),king,black);
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
             movesToAdd.clear();
@@ -1585,8 +1674,19 @@ public:
             allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         }
         return allLegalMoves;
+
+            //
+            // for (const auto& move : pseudoLegalMoves) {
+            // applyMove(move);
+            // if (!isKingInCheck(color))
+            // legalMoves.push_back(move);
+            // undoMove();
+            // }
+
     }
-    bool isLegalMove(MoveInformation moveOfInterest){
+    
+    
+    bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
         std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
         std::cout << std::endl <<std::endl;
         std::string moveString;
@@ -1746,7 +1846,7 @@ public:
         //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
         return move;
     }
-    //bool isGameOver(){}
+   
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
 
         std::cout << "Turn " << getGameTurnCount() + 1;
@@ -1805,10 +1905,6 @@ public:
             //if the king has no possible moves, then its checkmate!
         }
     }
-
-
-
-
 };
 
 

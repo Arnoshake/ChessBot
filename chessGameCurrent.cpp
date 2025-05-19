@@ -424,6 +424,8 @@ bool isSet(uint64_t bitboard, int square){
 }
 
 
+
+
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
     a2 = 8,  b2,  c2,  d2,  e2,  f2,  g2,  h2,
@@ -508,7 +510,7 @@ public:
     //prevents rightside overflow
     const uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
     const uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
-    int enPassantTargetSquare;
+    int enPassantTargetSquare; //probably should be private but shouldnt be modified as it will be passed in board creation
     Board(){
         whitePawns = 0ULL; 
         blackPawns = 0ULL;
@@ -528,13 +530,15 @@ public:
         whiteQueens = 0ULL;
         blackQueens = 0ULL;
 
+        friendlyPieces = 0ULL;
+        enemyPieces = 0ULL;
+
         whitePieces = whitePawns | whiteBishops | whiteRooks | whiteKnights | whiteKings | whiteQueens;
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        isWhiteTurn = white;
-        friendlyPieces = 0ULL;
-        enemyPieces = 0ULL;
+        isWhiteTurn = white;        //board creation defaults to white
+        
         enPassantTargetSquare = -1;
     };
 
@@ -572,25 +576,21 @@ public:
     uint64_t possiblePawnMovesBitBoard(){ 
       
         uint64_t pawnBitBoard;
-        uint64_t enemyPieces;
-        uint64_t friendlyPieces;
+        
         if (isWhiteTurn){
             pawnBitBoard = getWhitePawn();
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
         }
         else{
             pawnBitBoard = getBlackPawn();
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
         }
     
-       
+       uint64_t friendlyPieces = getFriendlyPieces();
+       uint64_t enemyPieces = getEnemyPieces();
     
         uint64_t possibleMoves = 0ULL;
         uint64_t possibleCaptures = 0ULL;
     
-        if (isWhiteTurn == 1){ // pawns move up.. << & en Passant rank = 4
+        if (isWhiteTurn){ // pawns move up.. << & en Passant rank = 4
             uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
             uint64_t doublePush = ( ( ( (0xFF00 & pawnBitBoard) << 8) & emptySquares ) << 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
         
@@ -599,11 +599,9 @@ public:
             possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
             possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
             possibleMoves |= possibleCaptures;
-            possibleMoves &= ~(friendlyPieces);
-            return possibleMoves;
+            possibleMoves &= ~(friendlyPieces); // may be redundant as possibleCaptures is anded with enemyPieces
         }
         else{ //identical logic, different variable values and shifting operator
-            std::cout<<"cheese cheese" << std::endl;
             uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
             uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & emptySquares ) >> 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
         
@@ -613,8 +611,8 @@ public:
             possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
             possibleMoves |= possibleCaptures;
             possibleMoves &= ~(friendlyPieces);
-            return possibleCaptures | possibleMoves;
         }
+        return possibleMoves;
     }
     uint64_t possibleKnightMovesBitBoard(){
         /*
@@ -642,6 +640,8 @@ public:
         uint64_t bitboard = knightBitBoard;
         uint64_t knightMoves = 0ULL;
     
+        //will not change right now because it aint broke... but!
+        //I dont need both knightMoves and bitboard. I created these to prevent cascading shifting but by assigning results to an outside/secondary board (knightMoves), cascading is avoided
         knightMoves |= (bitboard & notHFile) << 17;
         knightMoves |= (bitboard & notAFile) << 15;
         knightMoves |= (bitboard & notGHFile) << 10;
@@ -655,20 +655,19 @@ public:
     }
     uint64_t possibleBishopMovesBitBoard(){
         uint64_t bishopBitboard = 0ULL;
-        uint64_t friendlyPieces;
-        uint64_t enemyPieces;
         if (isWhiteTurn){
             bishopBitboard = getWhiteBishop();
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
         }
         else{
             bishopBitboard = getBlackBishop();
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
         }
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        friendlyPieces = getFriendlyPieces();
+        enemyPieces = getEnemyPieces();
+
         uint64_t bishopMoves = 0ULL;
-        for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
+        for (int square = 0; square < 64; square++){ // for every bishop, calculate the attacks
             if (isSet(bishopBitboard,square)){
                 bishopMoves |= get_bishop_attacks(square,getOccupiedSquares() );
             }
@@ -677,20 +676,17 @@ public:
         return bishopMoves;
     }
     uint64_t possibleRookMovesBitBoard(){
-        
-        uint64_t friendlyPieces;
-        uint64_t enemyPieces;
         uint64_t rookBitBoard = 0ULL;
         if (isWhiteTurn){
             rookBitBoard = getWhiteRook();
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
         }
         else{
             rookBitBoard = getBlackRook();
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
         }
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        friendlyPieces = getFriendlyPieces();
+        enemyPieces = getEnemyPieces();
 
         uint64_t rookMoves = 0ULL;
         for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
@@ -703,43 +699,50 @@ public:
     }
     uint64_t possibleQueenMovesBitBoard(){
         uint64_t queenBitBoard = 0ULL;
-        uint64_t enemyPieces;
-        uint64_t friendlyPieces;
+        
         if (isWhiteTurn){
             queenBitBoard = getWhiteQueen();
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
         }
         else{
             queenBitBoard = getBlackQueen();
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
         }
-        queenBitBoard |= possibleRookMovesBitBoard() | possibleBishopMovesBitBoard();
-        
-        return queenBitBoard;
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        friendlyPieces = getFriendlyPieces();
+        enemyPieces = getEnemyPieces();
+
+        uint64_t queenMoves;
+        for (int square = 0; square < 64; square++){ 
+            if (isSet(queenBitBoard,square)){
+                queenMoves |= get_rook_attacks(square,getOccupiedSquares() );
+                queenMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+            }
+        }
+        queenMoves &= ~ friendlyPieces;
+
+        return queenMoves;
     }
     uint64_t possibleKingMovesBitBoard(){
         
         uint64_t kingBitBoard;
-        uint64_t enemyPieces;
-        uint64_t friendlyPieces;
         if (isWhiteTurn){
             kingBitBoard = getWhiteKing();
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
+            
         }
         else{
             kingBitBoard = getBlackKing();
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
         }
-
-        
-
+       
+        uint64_t friendlyPieces;
+        uint64_t enemyPieces;
+        friendlyPieces = getFriendlyPieces();
+        enemyPieces = getEnemyPieces();
+        /*
+           789
+           1K1
+           987
+        */
         uint64_t kingAttack = 0ULL;
-
-    
         //top
         kingAttack |= (notAFile & kingBitBoard) >> 9;
         kingAttack |= kingBitBoard >> 8;
@@ -754,7 +757,7 @@ public:
         kingAttack &= ~friendlyPieces;
         return (kingAttack);
     }
-    //use the magic bitboard get_rook_attack and get_bishop_attack methods
+
     uint64_t getKnightMask(int square){
         /*
             15  17
@@ -862,7 +865,7 @@ public:
         return kingAttack;
     }
     
-    //MAKING MOVES
+    //MAKING MOVES...should piece be integer or Piece type
     void addPiece(Color color, int piece, int square){
         if (color){
             switch(piece){
@@ -924,7 +927,7 @@ public:
         getEmptySquares() = ~getOccupiedSquares();
     }
     void removePiece(Color color, int piece, int square){
-        if (color){
+        if (color){ //white
             switch(piece){
                 case pawn:
                         pop_bit(getWhitePawn(), square);
@@ -984,7 +987,7 @@ public:
         getEmptySquares() = ~getOccupiedSquares();
     }
     
-    void makeMove(Board board, MoveInformation move){                    //DONE FOR RIGHT NOW... MAY NEED LATER TESTING ONCE GAME IS IN FULL EFFECT
+    void makeMove(Board board, MoveInformation move){                  
         //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
 
         //this is ensured to be legal so responsibility of function is to only update the board
@@ -997,7 +1000,8 @@ public:
             
         }
     
-
+        
+    
         //CAPTURES/ENPASSANT
         if (move.isCapture){
             if (move.isEnpassant){
@@ -1014,6 +1018,7 @@ public:
       
                 //remove piece from origin
                 board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 
+                return; //enPassant cannot lead to castling, promotion, etc.
             }
             else{ //traditional captures
               
@@ -1023,6 +1028,7 @@ public:
                 board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
             }
         }
+       
         //CASTLING
         else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
             if (move.playerColor == white){
@@ -1056,26 +1062,21 @@ public:
                 board.addPiece(white,rook,d8); 
             }
         }
+        //REGULAR MOVES (Passive/NonCapture)
+        else if (move.isCapture == 0){ 
+            board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
+            // displayBoard();
+            board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
+            // displayBoard();
+        }
+        
         //PROMOTIONS
         if (move.isPromotion){
-            board.removePiece(move.playerColor,pawn,move.fromSquare); //all promotions are pawn piece type
+            //any move that is a promotion must have triggered one of the previous bool statements, so the only change to make is to replace the pawn from the TO square with whatever it promotes to
+            board.removePiece(move.playerColor,pawn,move.toSquare); //all promotions are pawn piece type
             board.addPiece(move.playerColor,move.promotionPiece,move.toSquare);
         }
         
-        //regular moves
-        if (move.playerColor == white){
-            board.addPiece(white,move.pieceType,move.toSquare);
-            // displayBoard();
-            board.removePiece(white,move.pieceType,move.fromSquare);
-            // displayBoard();
-        }
-        else{
-            board.addPiece(black,move.pieceType,move.toSquare);
-            //displayBoard();
-            board.removePiece(black,move.pieceType,move.fromSquare);
-            //displayBoard();
-        }
-    
     } 
     
     

@@ -1,24 +1,6 @@
-Need to figure out why all moves are being made from the perspective of white 
-    ANSWER: move code establishes piece type by chess notation ,which is from the perspective of white (capital letters).
-            created an enumeration that will allow for conversion to black when making moves
+TO DO:
+    update legalMoves to prevent king being in check
 
-need to obviously fix move generation --> Longer term problem that should be tackled laer once other aspects are guaranteed accurate/working
+    fix the bug where black had wrong rank/file but the right move (orientation issue)
 
-check and checkmate functions and prune legalMoves out of these
-
-Need to modularize most functions to take a board parameter expicitly --> important for later game analysis & handling of move legality
-
-
-
-Need to review and create helper methods and restructure for proper encapsulation
-
-Need to get a clear understanding of checklist
-
-
-
-
-
-
-
-IMMEDIATE TO DO NEXT:
-isKingInCheck(Color x)
+    write checkmate/game ending stuff

@@ -454,7 +454,6 @@ enum boardRep{  //printing --> if black piece, add 6 to integer representation
 std::string kingCastleNotation = "O-O";
 std::string queenCastleNotation = "O-O-O";
 
-
 void printBitBoard(uint64_t board){
     for (int rank = 8; rank >= 1; rank--)
     { // Starts from rank 8 (top) down to rank 1
@@ -490,7 +489,7 @@ class MoveInformation{
 
         int turn;
         Color playerColor;
-        MoveInformation() { //chatGPT fixed
+        MoveInformation() { //chatGPT fixed                                 //
             isCheck = false;
             isCheckMate = false;
             isCapture = false;
@@ -575,9 +574,36 @@ private:
     uint64_t friendlyPieces;
     uint64_t enemyPieces;
     // 1= white, -1 = black
-    Color isWhiteTurn;
+    Color sideToMove;
+    bool kingCastleRights;
+    bool queenCastleRights;
 
 public:
+    bool operator==(const Board& other) const {
+        return occupiedSquares == other.occupiedSquares &&
+            whitePawns == other.whitePawns &&
+            blackPawns == other.blackPawns &&
+            whiteKnights == other.whiteKnights &&
+            blackKnights == other.blackKnights &&
+            whiteBishops == other.whiteBishops &&
+            blackBishops == other.blackBishops &&
+            whiteRooks == other.whiteRooks &&
+            blackRooks == other.blackRooks &&
+            whiteQueens == other.whiteQueens &&
+            blackQueens == other.blackQueens &&
+            whiteKings == other.whiteKings &&
+            blackKings == other.blackKings &&
+            emptySquares == other.emptySquares &&
+            sideToMove == other.sideToMove &&
+            enPassantTargetSquare == other.enPassantTargetSquare &&
+                kingCastleRights == other.kingCastleRights &&
+                queenCastleRights == other.queenCastleRights;
+
+            //    halfmove_clock == other.halfmove_clock &&
+            //    fullmove_number == other.fullmove_number;
+    }
+
+    
     //prevents leftside overflow
     const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
     const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
@@ -611,9 +637,11 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        isWhiteTurn = white;        //board creation defaults to white
+        sideToMove = white;        //board creation defaults to white
         
         enPassantTargetSquare = -1;
+        kingCastleRights = true;
+        queenCastleRights = true;
     };
 
     void initializeBoard()
@@ -640,7 +668,7 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        isWhiteTurn = white;
+        sideToMove = white;
         friendlyPieces = whitePieces;
         enemyPieces = blackPieces;
         enPassantTargetSquare = -1;
@@ -989,7 +1017,7 @@ public:
         }
         if (move.playerColor == black){
             enemyColor = white; 
-            
+        
         }
     
         
@@ -1196,9 +1224,9 @@ public:
         return none;
     }
     //1 billion helper and bool methods
-    int getSideForTurn(){
-        if (isWhiteTurn == 1) return 1;
-        return 0;
+    Color getSideForTurn(){
+        if (sideToMove == white) return white;
+        return black;
     }
     bool isWhitePiece(int square)
     {
@@ -1318,7 +1346,7 @@ private:
 
 
 public:
-    std::vector<MoveInformation> moveList; //holds all moves made (game turn - 1 = index)
+    std::vector<MoveInformation> masterMoveList; //holds all moves made (game turn - 1 = index)
     std::vector<Board> boardStates; //holds all board states
     bool whiteCastlePrivelege;
     bool blackCastlePrivelege;
@@ -1471,6 +1499,7 @@ public:
                 int destination = __builtin_ctzll(possibleMask); //iterate to the first set bit/piece on the board
 
                 MoveInformation legalMove;
+                legalMove.playerColor = color;                                                                              //moves are created assumed white, must reassign black
                 //generate the attributes of the move
                 legalMove.pieceType = pieceType;
                 legalMove.fromSquare = fromSquare;
@@ -1574,7 +1603,11 @@ public:
             // legalMoves.push_back(move);
             // undoMove();
             // }
-    
+    void printMoveList(std::vector<MoveInformation> moveList){
+    for (int i = 0; i < moveList.size();i++){
+        std::cout << getMoveString(moveList.at(i)) <<", ";
+    }
+}
     bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
         std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
         std::cout << std::endl <<std::endl;
@@ -1643,7 +1676,7 @@ public:
                 return move;
             }
         }
-        
+        move.playerColor = playerColor;
         move.isAmbiguous = false;
         // std::cout << moveStr << std::endl;
         switch (moveStr.at(0)){ //piece type
@@ -1868,27 +1901,34 @@ public:
     }
     
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
-
+        displayBoardForUser();
         std::cout << "Turn " << getGameTurnCount() + 1;
         std::string gameMoveString;
-        if (turn == white) std::cout << "W. ";
-        else std::cout << "B. ";
+        if (turn == white) std::cout << "W | ";
+        else std::cout << "B | ";
         
         std::cout << "Please make your move! (standard chess notation): ";
         std::string userInputtedNotation;
 
         std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(turn);
-
-       //MoveInformation userInput = parseMove(turn);
-        //int moveIndex = moveIndexInLegalList(possibleLegalMoves) ;
-        // while (moveIndex == -1){ //while move is not in legal move list
-        //     std::cout<< "Illegal Move! Please try another move!\n";
-        //     userInput = parseMove(turn,userInputtedNotation );
-        // }
         
-        MoveInformation matchingMove;
-        //matchingMove = possibleLegalMoves.at(moveIndex);
-        // makeMove(matchingMove);                                                                      FIXXXX
+        MoveInformation userMove = parseMove(turn); //need to handle typos
+        int moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
+        while (moveIndex == -1){ //while move is not in legal move list
+        std::cout<< "Illegal Move! Please try another move!\n";
+        std::cout << "(";
+        printMoveList(possibleLegalMoves);
+        std::cout << ")\n";
+        userMove = parseMove(turn);
+        moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
+        }
+        
+        MoveInformation matchingMove = possibleLegalMoves.at(moveIndex);
+        getBoard().makeMove(getBoard(), matchingMove);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        
+        boardStates.push_back(getBoard()); //adds the new (post-move) board to the game history
+        masterMoveList.push_back(matchingMove); //adds the move to bridge between board states
+        getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
     }
     std::string getMoveString(MoveInformation move)
     {
@@ -1926,6 +1966,7 @@ public:
         }
     }
 };
+
 
 
 

@@ -647,6 +647,146 @@ public:
     
     };
     //POSSIBLE CAPTURES/MOVES
+     uint64_t possiblePawnMovesBitBoard(Color colorOfInterest){ 
+      
+        uint64_t pawnBitBoard = getPawns(colorOfInterest);
+    
+       uint64_t friendlyPieces = getPieces(colorOfInterest);
+       uint64_t enemyPieces = getPieces(!colorOfInterest);
+    
+        uint64_t possibleMoves = 0ULL;
+        uint64_t possibleCaptures = 0ULL;
+    
+        if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
+            uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
+            uint64_t doublePush = ( ( ( (0xFF00 & pawnBitBoard) << 8) & emptySquares ) << 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
+        
+            possibleMoves = singlePush | doublePush ;
+            
+            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+            possibleMoves |= possibleCaptures;
+            possibleMoves &= ~(friendlyPieces); // may be redundant as possibleCaptures is anded with enemyPieces
+        }
+        else{ //identical logic, different variable values and shifting operator
+            uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
+            uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & emptySquares ) >> 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
+        
+            possibleMoves = singlePush | doublePush ;
+            
+            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+            possibleMoves |= possibleCaptures;
+            possibleMoves &= ~(friendlyPieces);
+        }
+        return possibleMoves;
+    }
+    uint64_t possibleKnightMovesBitBoard(Color colorOfInterest){
+        /*
+            15  17
+         6         10
+               x
+         10         6
+            17  15
+        
+        */
+        //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
+
+        uint64_t knightBitBoard = getKnights(colorOfInterest);
+        uint64_t friendlyPieces = getPieces(colorOfInterest);
+        uint64_t enemyPieces = getPieces(!colorOfInterest);
+       
+        uint64_t bitboard = knightBitBoard;
+        uint64_t knightMoves = 0ULL;
+    
+        //will not change right now because it aint broke... but!
+        //I dont need both knightMoves and bitboard. I created these to prevent cascading shifting but by assigning results to an outside/secondary board (knightMoves), cascading is avoided
+        knightMoves |= (bitboard & notHFile) << 17;
+        knightMoves |= (bitboard & notAFile) << 15;
+        knightMoves |= (bitboard & notGHFile) << 10;
+        knightMoves |= (bitboard & notABFile) << 6;
+        knightMoves |= (bitboard & notAFile) >> 17;
+        knightMoves |= (bitboard & notHFile) >> 15; 
+        knightMoves |= (bitboard & notABFile) >> 10; 
+        knightMoves |= (bitboard & notGHFile) >> 6; 
+        knightMoves &= ~friendlyPieces;
+        return knightMoves;
+    }
+    uint64_t possibleBishopMovesBitBoard(Color colorOfInterest){
+       
+        uint64_t bishopBitboard = getBishops(colorOfInterest);
+        uint64_t friendlyPieces = getPieces(colorOfInterest);
+        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        
+
+        uint64_t bishopMoves = 0ULL;
+        for (int square = 0; square < 64; square++){ // for every bishop, calculate the attacks
+            if (isSet(bishopBitboard,square)){
+                bishopMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+            }
+        }
+        bishopMoves &= ~friendlyPieces;
+        return bishopMoves;
+    }
+    uint64_t possibleRookMovesBitBoard(Color colorOfInterest){
+    
+        uint64_t rookBitBoard = getRooks(colorOfInterest);
+        uint64_t friendlyPieces = getPieces(colorOfInterest);
+        uint64_t enemyPieces = getPieces(!colorOfInterest);
+      
+        uint64_t rookMoves = 0ULL;
+        for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
+            if (isSet(rookBitBoard,square)){
+                rookMoves |= get_rook_attacks(square,getOccupiedSquares() );
+            }
+        }
+        rookMoves &= ~ friendlyPieces;
+        return rookMoves;
+    }
+    uint64_t possibleQueenMovesBitBoard(Color colorOfInterest){
+        
+        uint64_t queenBitBoard = getQueens(colorOfInterest);
+        uint64_t friendlyPieces = getPieces(colorOfInterest);
+        uint64_t enemyPieces = getPieces(!colorOfInterest);
+      
+        uint64_t queenMoves = 0ULL;
+        for (int square = 0; square < 64; square++){ 
+            if (isSet(queenBitBoard,square)){
+                queenMoves |= get_rook_attacks(square,getOccupiedSquares() );
+                queenMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+            }
+        }
+        queenMoves &= ~ friendlyPieces;
+
+        return queenMoves;
+    }
+    uint64_t possibleKingMovesBitBoard(Color colorOfInterest){
+
+        uint64_t kingBitBoard = getKing(colorOfInterest);
+        uint64_t friendlyPieces = getPieces(colorOfInterest);
+        uint64_t enemyPieces = getPieces(!colorOfInterest);
+      
+        uint64_t kingAttack = 0ULL;
+        /*
+           789
+           1K1
+           987
+        */
+        //top
+        kingAttack |= (notAFile & kingBitBoard) >> 9;
+        kingAttack |= kingBitBoard >> 8;
+        kingAttack |= (notAFile & kingBitBoard) >> 7; 
+        kingAttack |= (notHFile & kingBitBoard) >> 1;
+        //bottom
+        kingAttack |= (notHFile & kingBitBoard) << 7;
+        kingAttack |= kingBitBoard << 8;
+        kingAttack |= (notHFile & kingBitBoard) << 9;
+        kingAttack |= (notAFile & kingBitBoard) << 1;
+    
+        kingAttack &= ~friendlyPieces;
+        return (kingAttack);
+    }
+
     uint64_t getKnightMask(int square){
         /*
             15  17
@@ -1008,7 +1148,10 @@ public:
     } 
     
     bool isKingInCheck(Color side){
+        uint64_t kingLocation = getKing(side);
+        Color opponentColor = !side;
 
+        uint64_t opponentMoves = possiblePawnMovesBitBoard(opponentColor) | possibleKnightMovesBitBoard(opponentColor) | possibleBishopMovesBitBoard(opponentColor) | possibleRookMovesBitBoard(opponentColor) | possibleQueenMovesBitBoard(opponentColor) | possibleKingMovesBitBoard(opponentColor);
     }
 
 
@@ -1402,17 +1545,14 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
         return allLegalMoves;
-
-            //
+    }
+    //
             // for (const auto& move : pseudoLegalMoves) {
             // applyMove(move);
             // if (!isKingInCheck(color))
             // legalMoves.push_back(move);
             // undoMove();
             // }
-
-    }
-    
     
     bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
         std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);

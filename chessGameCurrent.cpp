@@ -369,7 +369,7 @@ uint64_t set_occupancy(int index, int bits_in_mask, uint64_t attack_mask)
         pop_bit(attack_mask, square);
         
         // make sure occupancy is on board
-        if (index & (1 << count))
+        if (index & (1 << count))                                                                                           //MAY NEED TO BE 1ULL
             // populate occupancy map
             occupancy |= (1ULL << square);
     }
@@ -393,7 +393,7 @@ void init_sliders_attacks(int is_bishop)
         int bit_count = count_bits(mask);
         
         // occupancy variations count
-        int occupancy_variations = 1 << bit_count;
+        int occupancy_variations = 1 << bit_count;                                                          //may need to be 1ULL
         
         // loop over occupancy variations
         for (int count = 0; count < occupancy_variations; count++)
@@ -647,12 +647,12 @@ public:
     
     };
     //POSSIBLE CAPTURES/MOVES
-     uint64_t possiblePawnMovesBitBoard(Color colorOfInterest){ 
+    uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){                 //NEED TO ACCOUNT FOR EN PASSANT
       
-        uint64_t pawnBitBoard = getPawns(colorOfInterest);
+        uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
     
-       uint64_t friendlyPieces = getPieces(colorOfInterest);
-       uint64_t enemyPieces = getPieces(!colorOfInterest);
+       uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+       uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
     
         uint64_t possibleMoves = 0ULL;
         uint64_t possibleCaptures = 0ULL;
@@ -681,7 +681,7 @@ public:
         }
         return possibleMoves;
     }
-    uint64_t possibleKnightMovesBitBoard(Color colorOfInterest){
+    uint64_t possibleKnightMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
         /*
             15  17
          6         10
@@ -692,9 +692,9 @@ public:
         */
         //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
 
-        uint64_t knightBitBoard = getKnights(colorOfInterest);
-        uint64_t friendlyPieces = getPieces(colorOfInterest);
-        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        uint64_t knightBitBoard = boardOfInterest.getKnights(colorOfInterest);
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
        
         uint64_t bitboard = knightBitBoard;
         uint64_t knightMoves = 0ULL;
@@ -712,59 +712,59 @@ public:
         knightMoves &= ~friendlyPieces;
         return knightMoves;
     }
-    uint64_t possibleBishopMovesBitBoard(Color colorOfInterest){
+    uint64_t possibleBishopMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
        
-        uint64_t bishopBitboard = getBishops(colorOfInterest);
-        uint64_t friendlyPieces = getPieces(colorOfInterest);
-        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        uint64_t bishopBitboard = boardOfInterest.getBishops(colorOfInterest);
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
         
 
         uint64_t bishopMoves = 0ULL;
         for (int square = 0; square < 64; square++){ // for every bishop, calculate the attacks
             if (isSet(bishopBitboard,square)){
-                bishopMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+                bishopMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
             }
         }
         bishopMoves &= ~friendlyPieces;
         return bishopMoves;
     }
-    uint64_t possibleRookMovesBitBoard(Color colorOfInterest){
+    uint64_t possibleRookMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
     
-        uint64_t rookBitBoard = getRooks(colorOfInterest);
-        uint64_t friendlyPieces = getPieces(colorOfInterest);
-        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        uint64_t rookBitBoard = boardOfInterest.getRooks(colorOfInterest);
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
       
         uint64_t rookMoves = 0ULL;
         for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
             if (isSet(rookBitBoard,square)){
-                rookMoves |= get_rook_attacks(square,getOccupiedSquares() );
+                rookMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
             }
         }
         rookMoves &= ~ friendlyPieces;
         return rookMoves;
     }
-    uint64_t possibleQueenMovesBitBoard(Color colorOfInterest){
+    uint64_t possibleQueenMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
         
-        uint64_t queenBitBoard = getQueens(colorOfInterest);
-        uint64_t friendlyPieces = getPieces(colorOfInterest);
-        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        uint64_t queenBitBoard = boardOfInterest.getQueens(colorOfInterest);
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
       
         uint64_t queenMoves = 0ULL;
         for (int square = 0; square < 64; square++){ 
             if (isSet(queenBitBoard,square)){
-                queenMoves |= get_rook_attacks(square,getOccupiedSquares() );
-                queenMoves |= get_bishop_attacks(square,getOccupiedSquares() );
+                queenMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
+                queenMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
             }
         }
         queenMoves &= ~ friendlyPieces;
 
         return queenMoves;
     }
-    uint64_t possibleKingMovesBitBoard(Color colorOfInterest){
+    uint64_t possibleKingMovesBitBoard(Board boardOfInterest,Color colorOfInterest){
 
-        uint64_t kingBitBoard = getKing(colorOfInterest);
-        uint64_t friendlyPieces = getPieces(colorOfInterest);
-        uint64_t enemyPieces = getPieces(!colorOfInterest);
+        uint64_t kingBitBoard = boardOfInterest.getKing(colorOfInterest);
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
       
         uint64_t kingAttack = 0ULL;
         /*
@@ -785,6 +785,26 @@ public:
     
         kingAttack &= ~friendlyPieces;
         return (kingAttack);
+    }
+
+    //necessary for isKingInCheck
+    uint64_t attackedByPawns(Board boardOfInterest,Color colorOfInterest){       
+      
+        uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+    
+        uint64_t possibleCaptures = 0ULL;
+    
+        if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
+            
+            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+        }
+        else{ //identical logic, different variable values and shifting operator
+            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+        }
+        return possibleCaptures;
     }
 
     uint64_t getKnightMask(int square){
@@ -809,7 +829,7 @@ public:
         uint64_t knightMoves = 0ULL;
         uint64_t bitboard = 0ULL;
         
-       uint64_t startingSquare = 1 << square;
+       uint64_t startingSquare = 1ULL << square;
        bitboard |= startingSquare;
        //step 1
        if ( (bitboard >> 17) & (notHFile) ) knightMoves |= (bitboard >> 17);
@@ -1147,11 +1167,12 @@ public:
         
     } 
     
-    bool isKingInCheck(Color side){
+    bool isKingInCheck(Board boardOfInterest, Color side){
         uint64_t kingLocation = getKing(side);
         Color opponentColor = !side;
+        uint64_t opponentMoves = attackedByPawns(boardOfInterest, opponentColor) | possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | possibleRookMovesBitBoard(boardOfInterest, opponentColor) | possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
 
-        uint64_t opponentMoves = possiblePawnMovesBitBoard(opponentColor) | possibleKnightMovesBitBoard(opponentColor) | possibleBishopMovesBitBoard(opponentColor) | possibleRookMovesBitBoard(opponentColor) | possibleQueenMovesBitBoard(opponentColor) | possibleKingMovesBitBoard(opponentColor);
+        return  ( (kingLocation & opponentMoves) != 0);
     }
 
 

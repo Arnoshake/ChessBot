@@ -439,6 +439,10 @@ enum Square {
 enum Color {
     black = -1, white = 1
 };
+inline Color operator!(Color c) { //GPT'd... allows me to do !white = black
+    return static_cast<Color>(-static_cast<int>(c));
+}
+
 enum Piece {
     none , pawn, bishop, knight, rook, queen, king
     
@@ -690,8 +694,8 @@ public:
         uint64_t friendlyPieces;
         uint64_t enemyPieces;
         if (side == white){ // pawns move up.. << & en Passant rank = 4
-            friendlyPieces = getWhitePieces();
-            enemyPieces = getBlackPieces();
+            friendlyPieces = getPieces(white);
+            enemyPieces = getPieces(black);
             uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
             uint64_t doublePush = 0ULL;
             if (rank == 1 && singlePush) doublePush = (singlePush << 8) & emptySquares;
@@ -707,8 +711,8 @@ public:
             possibleMoves |= possibleCaptures;
         }
         else{ //identical logic, different variable values and shifting operator
-            friendlyPieces = getBlackPieces();
-            enemyPieces = getWhitePieces();
+            friendlyPieces = getPieces(black);
+            enemyPieces = getPieces(white);
     
             uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
             uint64_t doublePush = 0ULL;
@@ -753,124 +757,64 @@ public:
     //MAKING MOVES...should piece be integer or Piece type
     
     void addPiece(Color color, int piece, int square){
-        if (color == white){
-            std::cout<< "cheese!\n";
             switch(piece){
                 case pawn:
-                    set_bit(getWhitePawn(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getPawns(color), square);
+                    set_bit(getPieces(color),square);
                     break;
                 case bishop:
-                    set_bit(getWhiteBishop(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getBishops(color), square);
+                    set_bit(getPieces(color),square);
                     break;
                 case knight:
-                    set_bit(getWhiteKnight(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getKnights(color), square);
+                    set_bit(getPieces(color),square);
                     break;
                 case rook:
-                    set_bit(getWhiteRook(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getRooks(color), square);
+                    set_bit(getPieces(white),square);
                     break;
                 case queen:
-                    set_bit(getWhiteQueen(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getQueens(color), square);
+                    set_bit(getPieces(color),square);
                     break;
                 case king:
-                    set_bit(getWhiteKing(), square);
-                    set_bit(getWhitePieces(),square);
+                    set_bit(getKing(color), square);
+                    set_bit(getPieces(color),square);
                     break;
             }
-        }
-        else{
-            std::cout<<"cheddar!\n";
-            switch(piece){
-                case pawn:
-                    set_bit(getBlackPawn(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-                case bishop:
-                    set_bit(getBlackBishop(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-                case knight:
-                    set_bit(getBlackKnight(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-                case rook:
-                    set_bit(getBlackRook(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-                case queen:
-                    set_bit(getBlackQueen(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-                case king:
-                    set_bit(getBlackKing(), square);
-                    set_bit(getBlackPieces(),square);
-                    break;
-            }
-        }
         set_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
     void removePiece(Color color, int piece, int square){
-        if (color == white){ //white
-            switch(piece){
-                case pawn:
-                        pop_bit(getWhitePawn(), square);
-                        pop_bit(getWhitePieces(),square);
-                    break;
-                case bishop:
-                        pop_bit(getWhiteBishop(), square);
-                        pop_bit(getWhitePieces(),square);
-                    break;
-                case knight:
-                    pop_bit(getWhiteKnight(), square);
-                    pop_bit(getWhitePieces(),square);
-                    break;
-                case rook:
-                    pop_bit(getWhiteRook(), square);
-                    pop_bit(getWhitePieces(),square);
-                    break;
-                case queen:
-                    pop_bit(getWhiteQueen(), square);
-                    pop_bit(getWhitePieces(),square);
-                    break;
-                case king:
-                    pop_bit(getWhiteKing(), square);
-                    pop_bit(getWhitePieces(),square);
-                    break;
+        switch(piece){
+            case pawn:
+                pop_bit(getPawns(color), square);
+                pop_bit(getPieces(color),square);
+                break;
+            case bishop:
+                pop_bit(getBishops(color), square);
+                pop_bit(getPieces(color),square);
+                break;
+            case knight:
+                pop_bit(getKnights(color), square);
+                pop_bit(getPieces(color),square);
+                break;
+            case rook:
+                pop_bit(getRooks(color), square);
+                pop_bit(getPieces(white),square);
+                break;
+            case queen:
+                pop_bit(getQueens(color), square);
+                pop_bit(getPieces(color),square);
+                break;
+            case king:
+                pop_bit(getKing(color), square);
+                pop_bit(getPieces(color),square);
+                break;
             }
-        }
-        else{
-            switch(piece){
-                case pawn:
-                    pop_bit(getBlackPawn(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-                case bishop:
-                    pop_bit(getBlackBishop(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-                case knight:
-                    pop_bit(getBlackKnight(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-                case rook:
-                    pop_bit(getBlackRook(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-                case queen:
-                    pop_bit(getBlackQueen(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-                case king:
-                    pop_bit(getBlackKing(), square);
-                    pop_bit(getBlackPieces(),square);
-                    break;
-            }
-        }
+            
+        
         pop_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
@@ -1063,17 +1007,19 @@ public:
         
     } 
     
+    bool isKingInCheck(Color side){
 
+    }
 
 
     void updateFriendlyEnemy(Color color){
-        if (white){
-            getFriendlyPieces() = getWhitePieces();
-            getEnemyPieces() = getBlackPieces();
+        if (color == white){
+            getFriendlyPieces() = getPieces(white);
+            getEnemyPieces() = getPieces(black);
         }
         else{
-            getFriendlyPieces() = getBlackPieces();
-            getEnemyPieces() = getWhitePieces();
+            getFriendlyPieces() = getPieces(black);
+            getEnemyPieces() = getPieces(white);
         }
     }
     Piece getPieceAtSquare(int square){
@@ -1158,66 +1104,35 @@ public:
     uint64_t& getEmptySquares(){
         return emptySquares;
     }
-    uint64_t& getPieces(int color){
-        if (color) return getWhitePieces();
-        else return getBlackPieces();
+    uint64_t& getPieces(Color color){
+        if (color == white) return whitePieces;
+        if (color == black) return blackPieces;
     }
-    uint64_t& getWhitePieces()
-    {
-        return whitePieces;
-    };
-    uint64_t& getBlackPieces()
-    {
-        return blackPieces;
-    };
-    uint64_t& getWhitePawn()
-    {
-        return whitePawns;
-    };
-    uint64_t& getBlackPawn()
-    {
-        return blackPawns;
-    };
-    uint64_t& getWhiteKnight()
-    {
-        return whiteKnights;
-    };
-    uint64_t& getBlackKnight()
-    {
-        return blackKnights;
-    };
-    uint64_t& getWhiteBishop()
-    {
-        return whiteBishops;
-    };
-    uint64_t& getBlackBishop()
-    {
-        return blackBishops;
-    };
-    uint64_t& getWhiteRook()
-    {
-        return whiteRooks;
-    };
-    uint64_t& getBlackRook()
-    {
-        return blackRooks;
-    };
-    uint64_t& getWhiteQueen()
-    {
-        return whiteQueens;
-    };
-    uint64_t& getBlackQueen()
-    {
-        return blackQueens;
-    };
-    uint64_t& getWhiteKing()
-    {
-        return whiteKings;
-    };
-    uint64_t& getBlackKing()
-    {
-        return blackKings;
-    };
+    uint64_t& getPawns(Color color){
+        if (color == white) return whitePawns;
+        if (color == black) return blackPawns;
+    }
+    uint64_t& getKnights(Color color){
+        if (color == white) return whiteKnights;
+        if (color == black) return blackKnights;
+    }
+    uint64_t& getBishops(Color color){
+        if (color == white) return whiteBishops;
+        if (color == black) return blackBishops;
+    }
+    uint64_t& getRooks(Color color){
+        if (color == white) return whiteRooks;
+        if (color == black) return blackRooks;
+    }
+    uint64_t& getQueens(Color color){
+        if (color == white) return whiteQueens;
+        if (color == black) return blackQueens;
+    }
+    uint64_t& getKing(Color color){
+        if (color == white) return whiteKings;
+        if (color == black) return blackKings;
+    }
+   
     uint64_t& getFriendlyPieces(){
         return friendlyPieces;
     }
@@ -1225,6 +1140,8 @@ public:
         return enemyPieces;
     }
 };
+
+    
 
 
 class Game
@@ -1457,62 +1374,33 @@ public:
     std::vector<MoveInformation> generateLegalMoves(Color color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
-        if (color == white){
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhitePawn(),pawn,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteKnight(),knight,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKnights(color),knight,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteBishop(),bishop,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBishops(color),bishop,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteRook(),rook,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getRooks(color),rook,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteQueen(),queen,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getQueens(color),queen,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getWhiteKing(),king,white);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKing(color),king,color);
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-            movesToAdd.clear();                                                             // is this necessary?
-            if (canKingCastle(white)){
-                movesToAdd.push_back(createMoveFromString(white, "O-O"));
-            }
-            if (canQueenCastle(white)){
-                movesToAdd.push_back(createMoveFromString(white, "O-O-O"));
-            }
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
+        movesToAdd.clear();                                                             // is this necessary?
+        if (canKingCastle(color)){
+            movesToAdd.push_back(createMoveFromString(color, "O-O"));
         }
-        else{
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackPawn(),pawn,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackKnight(),knight,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackBishop(),bishop,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackRook(),rook,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackQueen(),queen,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBlackKing(),king,black);
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-            movesToAdd.clear();
-            if (canKingCastle(black)){
-                movesToAdd.push_back(createMoveFromString(black, "O-O"));
-            }
-            if (canQueenCastle(black)){
-                movesToAdd.push_back(createMoveFromString(black, "O-O-O"));
-            }
-            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
+        if (canQueenCastle(color)){
+            movesToAdd.push_back(createMoveFromString(white, "O-O-O"));
         }
+        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
+
         return allLegalMoves;
 
             //

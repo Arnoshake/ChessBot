@@ -1412,18 +1412,17 @@ public:
         blackCastlePrivelege = true;
         turnCount = 0;
     }
-    
+    //GETTER METHODS
     Board& getBoard(){
         return board;
     }
     int getGameTurnCount(){
         return turnCount;
     }
-    
     Color& getColorOfPlayerTakingTurn(){
         return playerTakingTurnColor;
     }
-
+    //GAME/PLAYER CONDITIONS
     bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
         if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
         if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(h8) == rook) && ((board.getPieceAtSquare(f8) == none)) && (board.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
@@ -1434,71 +1433,8 @@ public:
         if (color == black && (board.getPieceAtSquare(e8) == king) && (board.getPieceAtSquare(a8) == rook) && ((board.getPieceAtSquare(c8) == none)) && (board.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
         return false;
     }
-    void displayBoardForUser()
-    {
-        /*
-            Created 1/29/25 from 3:00 - 4:06PM
-            chatGPT was used for the use of the 1ULL << square function
-
-            Want to improve with using unicode symbols for pieces
-        */
-        char blackPawn = 'p';
-        char blackRook = 'r';
-        char blackKnight = 'n';
-        char blackBishop = 'b';
-        char blackQueen = 'q';
-        char blackKing = 'k';
-
-        char whitePawn = 'P';
-        char whiteRook = 'R';
-        char whiteKnight = 'N';
-        char whiteBishop = 'B';
-        char whiteQueen = 'Q';
-        char whiteKing = 'K';
-
-        
-        // rank = row, file = col
-    for (int rank = 8; rank >= 1; rank--){ // Starts from rank 8 (top) down to rank 1
-        for (int file = 1; file <= 8; file++){
-            int square = (rank-1) * 8 + file-1;
-            if (file == 0) std::cout << (rank + 1) << " ";
-            // std::cout<< board.getPieceAtSquare(square);
-            // continue;
-            if (!board.isOccupied(square))
-                    std::cout << '.';
-                else if (board.isWhitePawn(square))
-                    std::cout << whitePawn;
-                else if (board.isWhiteBishop(square))
-                    std::cout << whiteBishop;
-                else if (board.isWhiteRook(square))
-                    std::cout << whiteRook;
-                else if (board.isWhiteKnight(square))
-                    std::cout << whiteKnight;
-                else if (board.isWhiteQueen(square))
-                    std::cout << whiteQueen;
-                else if (board.isWhiteKing(square))
-                    std::cout << whiteKing;
-
-                else if (board.isBlackPawn(square))
-                    std::cout << blackPawn;
-                else if (board.isBlackBishop(square))
-                    std::cout << blackBishop;
-                else if (board.isBlackRook(square))
-                    std::cout << blackRook;
-                else if (board.isBlackKnight(square))
-                    std::cout << blackKnight;
-                else if (board.isBlackQueen(square))
-                    std::cout << blackQueen;
-                else if (board.isBlackKing(square))
-                    std::cout << blackKing;
-        }
-            
-        std::cout << std::endl;
-    }
-    std::cout << "ABCDEFGH\n";
-    std::cout << std::endl;
-}
     
+    //MOVE GENERATION
     std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
         board.updateFriendlyEnemy(color);
         std::vector<MoveInformation> moveListForBoard; 
@@ -1667,7 +1603,7 @@ public:
     }
 }
 
-   
+    //CREATING MOVES
     MoveInformation parseMove(Color playerColor)
     {
         std::string lineArg;
@@ -1949,7 +1885,7 @@ public:
         return ss.str();
     } 
     
-
+    //MAKING MOVE
     int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
         //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
         for (int i = 0; i < moveList.size(); i++) {
@@ -2012,6 +1948,7 @@ public:
         getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
     }
     
+    //GAME ENDING CONDITIONS
     bool isKingInCheck(Board boardOfInterest, Color side){
         uint64_t kingLocation = boardOfInterest.getKing(side);
         Color opponentColor = !side;
@@ -2019,12 +1956,11 @@ public:
 
         return  ( (kingLocation & opponentMoves) != 0); //returns true on check
     }
-
     bool isCheckMate(Color colorBeingChecked, Board boardState){
         std::vector<MoveInformation> legalMoves = generateLegalMoves(colorBeingChecked);
         return (legalMoves.empty() && isKingInCheck(getBoard(),colorBeingChecked));
     }
-    bool isStaleMate(Board boardState){
+    bool isStaleMate(Board boardState){     //NEED TO ADD 50 HALFMOVE GAME RULE
         std::vector<MoveInformation> whiteMoves = generateLegalMoves(white);
         std::vector<MoveInformation> blackMoves = generateLegalMoves(black);
         return ( (whiteMoves.empty() && !isCheckMate(white,boardState)) || (blackMoves.empty() && !isCheckMate(black,boardState)) );
@@ -2035,16 +1971,63 @@ public:
 
 
 
+// void displayBoardForUser()
+//     {
+//         /*
+//             Created 1/29/25 from 3:00 - 4:06PM
+//             chatGPT was used for the use of the 1ULL << square function
+//             Want to improve with using unicode symbols for pieces
+//         */
+//         char blackPawn = 'p';
+//         char blackRook = 'r';
+//         char blackKnight = 'n';
+//         char blackBishop = 'b';
+//         char blackQueen = 'q';
+//         char blackKing = 'k';
+//         char whitePawn = 'P';
+//         char whiteRook = 'R';
+//         char whiteKnight = 'N';
+//         char whiteBishop = 'B';
+//         char whiteQueen = 'Q';
+//         char whiteKing = 'K';  
+//         // rank = row, file = col
+//     for (int rank = 8; rank >= 1; rank--){ // Starts from rank 8 (top) down to rank 1
+//         for (int file = 1; file <= 8; file++){
+//             int square = (rank-1) * 8 + file-1;
+//             if (file == 0) std::cout << (rank + 1) << " ";
+//             // std::cout<< board.getPieceAtSquare(square);
+//             // continue;
+//             if (!board.isOccupied(square))
+//                     std::cout << '.';
+//                 else if (board.isWhitePawn(square))
+//                     std::cout << whitePawn;
+//                 else if (board.isWhiteBishop(square))
+//                     std::cout << whiteBishop;
+//                 else if (board.isWhiteRook(square))
+//                     std::cout << whiteRook;
+//                 else if (board.isWhiteKnight(square))
+//                     std::cout << whiteKnight;
+//                 else if (board.isWhiteQueen(square))
+//                     std::cout << whiteQueen;
+//                 else if (board.isWhiteKing(square))
+//                     std::cout << whiteKing;
+//                 else if (board.isBlackPawn(square))
+//                     std::cout << blackPawn;
+//                 else if (board.isBlackBishop(square))
+//                     std::cout << blackBishop;
+//                 else if (board.isBlackRook(square))
+//                     std::cout << blackRook;
+//                 else if (board.isBlackKnight(square))
+//                     std::cout << blackKnight;
+//                 else if (board.isBlackQueen(square))
+//                     std::cout << blackQueen;
+//                 else if (board.isBlackKing(square))
+//                     std::cout << blackKing;
+//         }          
+//         std::cout << std::endl;
+//     }
+//     std::cout << "ABCDEFGH\n";
+//     std::cout << std::endl;
+// }
 
-
-/*
-    I need to restructure the object structure of the code.
-
-
-    types of check
-        discoveredChecks/pinning* -->requires the compromisingcheck function
-        
-
-
-*/
 

@@ -1333,6 +1333,51 @@ public:
     }
 
 //TESTING CODE
+std::string getPieceSymbol(Piece piece, Color color) {
+    switch (piece) {
+        case king:   return color == white ? "♔ " : "♚ ";
+        case queen:  return color == white ? "♕ " : "♛ ";
+        case rook:   return color == white ? "♖ " : "♜ ";
+        case bishop: return color == white ? "♗ " : "♝ ";
+        case knight: return color == white ? "♘ " : "♞ ";
+        case pawn:   return color == white ? "♙ " : "♟ ";
+        default:     return "·";  // or " " or "□"
+    }
+}
+
+Color getColorAtSquare(int square) const {
+    uint64_t mask = 1ULL << square;
+    
+    if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKings) & mask)
+        return white;
+
+    if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKings) & mask)
+        return black;
+    //will not return because this function will only be called on squares with pieces
+}
+void displayBoardPolished() {
+    std::cout << "  +------------------------+" << std::endl;
+    for (int rank = 7; rank >= 0; --rank) {
+        std::cout << rank + 1 << " | ";
+        for (int file = 0; file < 8; ++file) {
+            int square = rank * 8 + file;
+            if (isSet(occupiedSquares,square)){
+                Piece piece = getPieceAtSquare(square);
+                Color color = getColorAtSquare(square);
+                std::string symbol = getPieceSymbol(piece, color);
+                std::cout << symbol << " ";
+            }
+            else{
+                std::cout << ".  ";
+            }
+            
+            
+        }
+        std::cout << "|" << std::endl;
+    }
+    std::cout << "  +------------------------+" << std::endl;
+    std::cout << "    a b c d e f g h" << std::endl;
+}
 
 
 };

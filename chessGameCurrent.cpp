@@ -1026,13 +1026,13 @@ public:
         
             if (move.isEnpassant){
                 //place piece at en passant square...
-
+                std::cout<<"\nTHIS IS AN EN PASSANT MOVE\n";
                 board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
                 //remove pawn that was passant'd
                 int pawnToBeRemoved;
                 //color determines if the piece that jumped is above or behind the pawn
-                if (enemyColor == black) pawnToBeRemoved = move.toSquare + 8;
-                else pawnToBeRemoved = move.toSquare - 8;
+                if (enemyColor == black) pawnToBeRemoved = move.toSquare - 8;
+                else pawnToBeRemoved = move.toSquare + 8;
 
                 board.removePiece(enemyColor,pawn, pawnToBeRemoved);
       
@@ -1041,7 +1041,7 @@ public:
                 return; //enPassant cannot lead to castling, promotion, etc.
             }
             else{ //traditional captures
-              
+              std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
                 board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
                 //move the player's piece
                 board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
@@ -1135,7 +1135,7 @@ public:
                 if (enemyColor == black) pawnToBeAddedSquare = move.toSquare + 8;
                 else pawnToBeAddedSquare = move.toSquare - 8;
 
-                board.addPiece(move.playerColor,pawn,pawnToBeAddedSquare);
+                board.addPiece(enemyColor,pawn,pawnToBeAddedSquare);
 
 
 
@@ -1436,6 +1436,7 @@ public:
     
     //MOVE GENERATION
     std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
+        if (bitBoard == 0ULL) return {};
         board.updateFriendlyEnemy(color);
         std::vector<MoveInformation> moveListForBoard; 
         uint64_t possibleMask = 0ULL;
@@ -1487,13 +1488,21 @@ public:
                 //now grab information from board at the destination
 
                 //captures
-                if (board.getPieceAtSquare(destination) == none){
-                    legalMove.isCapture = false;
+                
+            
+                if (destination == board.enPassantTargetSquare && pieceType == pawn && board.getPieceAtSquare(destination) == none){
+                    legalMove.isCapture = true;
+                    legalMove.isEnpassant = true;
+                    legalMove.capturedPiece = pawn;
                 }
-                else{
+                else if (board.getPieceAtSquare(destination) != none){
                     legalMove.isCapture = true;
                     legalMove.capturedPiece = board.getPieceAtSquare(destination);
                 }
+                else{
+                    legalMove.isCapture = false;
+                }
+                
                 //castling
                 if (color == white) { //castling will never be generated from a bitboard. its outside the normal rules for king movement
                     if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == h1 ) legalMove.isKingCastle = true;
@@ -1935,10 +1944,11 @@ public:
         MoveInformation matchingMove = possibleLegalMoves.at(moveIndex);
         getBoard().makeMove(getBoard(), matchingMove);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
-        if (userMove.pieceType == pawn && abs(userMove.toSquare - userMove.fromSquare) == 16) {
-        getBoard().enPassantTargetSquare = (userMove.toSquare + userMove.fromSquare) / 2;
-        std::cout << std::endl <<getBoard().enPassantTargetSquare <<std::endl;
-        }
+        if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
+        getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;
+        std::cout << "Setting enPassantTargetSquare to: " << matchingMove.toSquare  << " + "<<matchingMove.fromSquare<< " -->" <<getBoard().enPassantTargetSquare << "\n";
+
+    }
         else{
             getBoard().enPassantTargetSquare = -1;
         }

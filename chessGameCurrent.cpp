@@ -1335,12 +1335,12 @@ public:
 //TESTING CODE
 std::string getPieceSymbol(Piece piece, Color color) {
     switch (piece) {
-        case king:   return color == white ? "♔ " : "♚ ";
-        case queen:  return color == white ? "♕ " : "♛ ";
-        case rook:   return color == white ? "♖ " : "♜ ";
-        case bishop: return color == white ? "♗ " : "♝ ";
-        case knight: return color == white ? "♘ " : "♞ ";
-        case pawn:   return color == white ? "♙ " : "♟ ";
+        case king:   return color == black ? "♔ " : "♚ ";
+        case queen:  return color == black ? "♕ " : "♛ ";
+        case rook:   return color == black ? "♖ " : "♜ ";
+        case bishop: return color == black ? "♗ " : "♝ ";
+        case knight: return color == black ? "♘ " : "♞ ";
+        case pawn:   return color == black ? "♙ " : "♟ ";
         default:     return "·";  // or " " or "□"
     }
 }
@@ -1376,7 +1376,7 @@ void displayBoardPolished() {
         std::cout << "|" << std::endl;
     }
     std::cout << "  +------------------------+" << std::endl;
-    std::cout << "    a b c d e f g h" << std::endl;
+    std::cout << "    a  b  c  d  e  f  g  h" << std::endl;
 }
 
 
@@ -1665,21 +1665,21 @@ public:
         std::cout << getMoveString(moveList.at(i)) <<", ";
     }
 }
-    bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
-        std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
-        std::cout << std::endl <<std::endl;
-        std::string moveString;
-        for (int i = 0; i < legalMoves.size() ; i++){
-            moveString = getMoveString(legalMoves.at(i));
-            std::cout << moveString << std::endl;
-        }
-        if (moveIndexInLegalList(legalMoves,moveOfInterest) >= 0){
-            return true;
-        }
+    // bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
+    //     std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
+    //     std::cout << std::endl <<std::endl;
+    //     std::string moveString;
+    //     for (int i = 0; i < legalMoves.size() ; i++){
+    //         moveString = getMoveString(legalMoves.at(i));
+    //         std::cout << moveString << std::endl;
+    //     }
+    //     if (moveIndexInLegalList(legalMoves,moveOfInterest) >= 0){
+    //         return true;
+    //     }
         
-        return false;
+    //     return false;
         
-    }
+    // }
     int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
         //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
         for (int i = 0; i < moveList.size(); i++) {
@@ -1958,7 +1958,7 @@ public:
     }
     
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
-        displayBoardForUser();
+        getBoard().displayBoardPolished();
         std::cout << "Turn " << getGameTurnCount() + 1;
         std::string gameMoveString;
         if (turn == white) std::cout << "W | ";
@@ -2003,24 +2003,10 @@ public:
         if (move.isCheckMate) ss << "#";
         return ss.str();
     } 
-    bool isCompromisingCheck(Color colorTakingTurn, Board boardState, MoveInformation moveOfInterest){
-        /*
-            Should these check and mate functions be board level or move specific? My gut instinct is move specific as states change through moves. Additionally, this tightens scope of search
-            Player moves are only legal if it doesnt put themselves in check!
-            Moves will always be passed with proper notation which determine if
-        */
-        
-        Board boardstateCopy = getBoard(); //clone/copy of main board
-
-       // makeMove( moveOfInterest );  //need to pass boards explicitly, otherwise operates by default on game board                FIXXXXX
-
-        //post move, need to see if the mask of possible attacks overlap with the king --> How to get this master bitboard in the cleanest way possible?
-
-    }
-    bool isCheckMate(Color colorTakingTurn, Board boardState, MoveInformation moveOfInterest){
-        if ( isCompromisingCheck(colorTakingTurn,boardState, moveOfInterest) ) {
-            //if the king has no possible moves, then its checkmate!
-        }
+    
+    bool isCheckMate(Color colorTakingTurn, Board boardState){
+        std::vector<MoveInformation> legalMoves = generateLegalMoves(colorTakingTurn);
+        return legalMoves.empty();
     }
 };
 

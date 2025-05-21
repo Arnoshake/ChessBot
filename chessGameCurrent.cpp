@@ -1034,7 +1034,7 @@ public:
                 if (enemyColor == black) pawnToBeRemoved = move.toSquare + 8;
                 else pawnToBeRemoved = move.toSquare - 8;
 
-                board.removePiece(move.playerColor,pawn, pawnToBeRemoved);
+                board.removePiece(enemyColor,pawn, pawnToBeRemoved);
       
                 //remove piece from origin
                 board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 

@@ -426,6 +426,8 @@ bool isSet(uint64_t bitboard, int square){
 
 
 
+
+
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
     a2 = 8,  b2,  c2,  d2,  e2,  f2,  g2,  h2,
@@ -447,10 +449,7 @@ enum Piece {
     none , pawn, bishop, knight, rook, queen, king
     
 };
-enum boardRep{  //printing --> if black piece, add 6 to integer representation
-    P,B,N,R,Q,K, // white (0-5)
-    p,b,n,r,q,k  // black (6-11)
-};
+
 std::string kingCastleNotation = "O-O";
 std::string queenCastleNotation = "O-O-O";
 
@@ -894,8 +893,8 @@ public:
             // }
             possibleMoves = singlePush | doublePush ;
             pawnBitBoard = 1ULL << square;
-            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
+            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
             possibleMoves |= possibleCaptures;
         }
         else{ //identical logic, different variable values and shifting operator
@@ -906,9 +905,9 @@ public:
             uint64_t doublePush = 0ULL;
             if (rank == 6 && singlePush) doublePush = (singlePush >> 8) & emptySquares;
             possibleMoves = singlePush | doublePush ;
-            
-            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+                                                                                            //DONT FORGET TO REMOVE
+            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
+            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
             possibleMoves |= possibleCaptures;
         }
         
@@ -1195,14 +1194,7 @@ public:
         
     } 
     
-    bool isKingInCheck(Board boardOfInterest, Color side){
-        uint64_t kingLocation = getKing(side);
-        Color opponentColor = !side;
-        uint64_t opponentMoves = attackedByPawns(boardOfInterest, opponentColor) | possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | possibleRookMovesBitBoard(boardOfInterest, opponentColor) | possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
-
-        return  ( (kingLocation & opponentMoves) != 0); //returns true on check
-    }
-
+    
 
     void updateFriendlyEnemy(Color color){
         if (color == white){
@@ -1299,14 +1291,20 @@ public:
     uint64_t& getPieces(Color color){
         if (color == white) return whitePieces;
         if (color == black) return blackPieces;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
     uint64_t& getPawns(Color color){
         if (color == white) return whitePawns;
         if (color == black) return blackPawns;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
     uint64_t& getKnights(Color color){
         if (color == white) return whiteKnights;
         if (color == black) return blackKnights;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
     uint64_t& getBishops(Color color){
         if (color == white) return whiteBishops;
@@ -1315,14 +1313,20 @@ public:
     uint64_t& getRooks(Color color){
         if (color == white) return whiteRooks;
         if (color == black) return blackRooks;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
     uint64_t& getQueens(Color color){
         if (color == white) return whiteQueens;
         if (color == black) return blackQueens;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
     uint64_t& getKing(Color color){
         if (color == white) return whiteKings;
         if (color == black) return blackKings;
+        uint64_t dummy = 0ULL;
+        return dummy;
     }
    
     uint64_t& getFriendlyPieces(){
@@ -1392,9 +1396,10 @@ private:
     //bool isGameOver;
     Board board;
     int turnCount; //index for move/board history
-
-
+    
 public:
+    int winner = 0; //1 == white winner, -1 == black winner, 0 means ongoing or stalemate
+
     std::vector<MoveInformation> masterMoveList; //holds all moves made (game turn - 1 = index)
     std::vector<Board> boardStates; //holds all board states
     bool whiteCastlePrivelege;
@@ -1418,19 +1423,6 @@ public:
     Color& getColorOfPlayerTakingTurn(){
         return playerTakingTurnColor;
     }
-    void switchTurns() {
-        if (getColorOfPlayerTakingTurn() == white){
-            getColorOfPlayerTakingTurn() = black;
-            board.updateFriendlyEnemy(white);
-            return;
-        }
-        if (getColorOfPlayerTakingTurn() == black){
-            getColorOfPlayerTakingTurn() = white;
-            board.updateFriendlyEnemy(black);
-            return;
-        }
-    }
-
 
     bool canKingCastle(int color){ //check for if any of the 4 squares of relevance are in check... done later
         if (color == white && (board.getPieceAtSquare(e1) == king) && (board.getPieceAtSquare(h1) == rook) && ((board.getPieceAtSquare(f1) == none)) && (board.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
@@ -1595,7 +1587,7 @@ public:
                     CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
                 */
                getBoard().makeMove(getBoard(),legalMove);
-               if ( !(getBoard().isKingInCheck(getBoard(),legalMove.playerColor))){ //if the move
+               if ( !(isKingInCheck(getBoard(),legalMove.playerColor))){ //if the move
                     //add move to list
                     if (legalMove.isPromotion){                               
                         legalMove.promotionPiece = bishop;
@@ -1613,6 +1605,15 @@ public:
                }
                getBoard().undoMove(getBoard(),legalMove);
 
+               if (isKingInCheck( getBoard() , !legalMove.playerColor ) ){
+                //if the move leads to the opponent being in check
+                legalMove.isCheck = true;
+                std::vector<MoveInformation> legalMovesForCheckMate = generateLegalMoves(!legalMove.playerColor);
+                //if the move leads to the opponent having no possible moves AND is in check...    
+                if ( legalMovesForCheckMate.empty() ){
+                        legalMove.isCheckMate = true;
+                    }
+               }
                 possibleMask &= (possibleMask - 1); //clear the bit as it is done with
             }
 
@@ -1665,33 +1666,8 @@ public:
         std::cout << getMoveString(moveList.at(i)) <<", ";
     }
 }
-    // bool isLegalMove(MoveInformation moveOfInterest){       //this seems expensive, should legalMoves be generated outside of this function and passed?
-    //     std::vector<MoveInformation> legalMoves = generateLegalMoves(moveOfInterest.playerColor);
-    //     std::cout << std::endl <<std::endl;
-    //     std::string moveString;
-    //     for (int i = 0; i < legalMoves.size() ; i++){
-    //         moveString = getMoveString(legalMoves.at(i));
-    //         std::cout << moveString << std::endl;
-    //     }
-    //     if (moveIndexInLegalList(legalMoves,moveOfInterest) >= 0){
-    //         return true;
-    //     }
-        
-    //     return false;
-        
-    // }
-    int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
-        //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
-        for (int i = 0; i < moveList.size(); i++) {
-            // std::cout << getMoveString(targetMove) << " vs " << getMoveString(moveList.at(i)) << std::endl; testing move find
-            if(targetMove.chessNotation == getMoveString(moveList.at(i)) ){
-                // std::cout << targetMove.fromSquare << " vs " << moveList.at(i).fromSquare; comparing attributes
-                
-                return i;
-            }
-        }
-        return -1; //no index for move in list
-    }
+
+   
     MoveInformation parseMove(Color playerColor)
     {
         std::string lineArg;
@@ -1956,8 +1932,38 @@ public:
 
 
     }
+    std::string getMoveString(MoveInformation move)
+    {
+        std::stringstream ss;
+        if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
+        
+        if (move.isAmbiguous) ss << move.fromValue;
+        
+        if (move.isCapture) ss << 'x';
+        
+        ss << move.toFile << move.toRank;
+        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
+
+        if (move.isCheck) ss << "+";
+        if (move.isCheckMate) ss << "#";
+        return ss.str();
+    } 
     
+
+    int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
+        //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
+        for (int i = 0; i < moveList.size(); i++) {
+            // std::cout << getMoveString(targetMove) << " vs " << getMoveString(moveList.at(i)) << std::endl; testing move find
+            if(targetMove.chessNotation == getMoveString(moveList.at(i)) ){
+                // std::cout << targetMove.fromSquare << " vs " << moveList.at(i).fromSquare; comparing attributes
+                
+                return i;
+            }
+        }
+        return -1; //no index for move in list
+    }
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
+       
         getBoard().displayBoardPolished();
         std::cout << "Turn " << getGameTurnCount() + 1;
         std::string gameMoveString;
@@ -1980,33 +1986,49 @@ public:
         moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
         }
         
+        
+        //a move has been selected. if it is a double push, add en passantTargetSquare.
+        //when the other player makes their move, the square will be reset or updated
+        //chat generated
+        
+
+
+
+
+
         MoveInformation matchingMove = possibleLegalMoves.at(moveIndex);
         getBoard().makeMove(getBoard(), matchingMove);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
+        if (userMove.pieceType == pawn && abs(userMove.toSquare - userMove.fromSquare) == 16) {
+        getBoard().enPassantTargetSquare = (userMove.toSquare + userMove.fromSquare) / 2;
+        std::cout << std::endl <<getBoard().enPassantTargetSquare <<std::endl;
+        }
+        else{
+            getBoard().enPassantTargetSquare = -1;
+        }
+
         boardStates.push_back(getBoard()); //adds the new (post-move) board to the game history
         masterMoveList.push_back(matchingMove); //adds the move to bridge between board states
         getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
     }
-    std::string getMoveString(MoveInformation move)
-    {
-        std::stringstream ss;
-        if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
-        
-        if (move.isAmbiguous) ss << move.fromValue;
-        
-        if (move.isCapture) ss << 'x';
-        
-        ss << move.toFile << move.toRank;
-        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
-
-        if (move.isCheck) ss << "+";
-        if (move.isCheckMate) ss << "#";
-        return ss.str();
-    } 
     
-    bool isCheckMate(Color colorTakingTurn, Board boardState){
-        std::vector<MoveInformation> legalMoves = generateLegalMoves(colorTakingTurn);
-        return legalMoves.empty();
+    bool isKingInCheck(Board boardOfInterest, Color side){
+        uint64_t kingLocation = boardOfInterest.getKing(side);
+        Color opponentColor = !side;
+        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
+
+        return  ( (kingLocation & opponentMoves) != 0); //returns true on check
+    }
+
+    bool isCheckMate(Color colorBeingChecked, Board boardState){
+        std::vector<MoveInformation> legalMoves = generateLegalMoves(colorBeingChecked);
+        return (legalMoves.empty() && isKingInCheck(getBoard(),colorBeingChecked));
+    }
+    bool isStaleMate(Board boardState){
+        std::vector<MoveInformation> whiteMoves = generateLegalMoves(white);
+        std::vector<MoveInformation> blackMoves = generateLegalMoves(black);
+        return ( (whiteMoves.empty() && !isCheckMate(white,boardState)) || (blackMoves.empty() && !isCheckMate(black,boardState)) );
+        //if its not mate but player cant move
     }
 };
 

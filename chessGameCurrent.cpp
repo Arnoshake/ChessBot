@@ -1200,7 +1200,7 @@ public:
         Color opponentColor = !side;
         uint64_t opponentMoves = attackedByPawns(boardOfInterest, opponentColor) | possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | possibleRookMovesBitBoard(boardOfInterest, opponentColor) | possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
 
-        return  ( (kingLocation & opponentMoves) != 0);
+        return  ( (kingLocation & opponentMoves) != 0); //returns true on check
     }
 
 
@@ -1331,6 +1331,10 @@ public:
     uint64_t& getEnemyPieces(){
         return enemyPieces;
     }
+
+//TESTING CODE
+
+
 };
 
     
@@ -1454,7 +1458,7 @@ public:
             
         std::cout << std::endl;
     }
-    std::cout << "*ABCDEFGH\n";
+    std::cout << "ABCDEFGH\n";
     std::cout << std::endl;
 }
     
@@ -1542,20 +1546,28 @@ public:
                 //en passant
                 if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
 
-                if (legalMove.isPromotion){                                 //add move for each legal move added --> need to create a check for check and checkmate
-                    legalMove.promotionPiece = bishop;
+                /*
+                    CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
+                */
+               getBoard().makeMove(getBoard(),legalMove);
+               if ( !(getBoard().isKingInCheck(getBoard(),legalMove.playerColor))){ //if the move
+                    //add move to list
+                    if (legalMove.isPromotion){                               
+                        legalMove.promotionPiece = bishop;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = rook;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = queen;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = knight;
+                        moveListForBoard.push_back(legalMove);
+                    }
+                    else{
                     moveListForBoard.push_back(legalMove);
-                    legalMove.promotionPiece = rook;
-                    moveListForBoard.push_back(legalMove);
-                    legalMove.promotionPiece = queen;
-                    moveListForBoard.push_back(legalMove);
-                    legalMove.promotionPiece = knight;
-                    moveListForBoard.push_back(legalMove);
-                }
-                else{
-                moveListForBoard.push_back(legalMove);
-                }
-                
+                    }
+               }
+               getBoard().undoMove(getBoard(),legalMove);
+
                 possibleMask &= (possibleMask - 1); //clear the bit as it is done with
             }
 
@@ -1966,6 +1978,7 @@ public:
         }
     }
 };
+
 
 
 

@@ -1042,7 +1042,7 @@ public:
     }
     
     void makeMove(Board &board, MoveInformation move, int filterTest){  
-        if (filterTest) std::cout << "[DEBUG] Removing " << move.getPieceLetter(move.capturedPiece) << " from " << move.toSquare << std::endl;
+        //if (filterTest) std::cout << "[DEBUG] Removing " << move.getPieceLetter(move.capturedPiece) << " from " << move.toSquare << std::endl;
         //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
         
         //this is ensured to be legal so responsibility of function is to only update the board
@@ -1081,7 +1081,7 @@ public:
                 return; //enPassant cannot lead to castling, promotion, etc.
             }
             else{ //traditional captures
-              if (filterTest) std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
+              //if (filterTest) std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
                 board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
                 //move the player's piece
                 board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
@@ -1446,7 +1446,7 @@ public:
     Board& getBoard(){
         return board;
     }
-    int getGameTurnCount(){
+    int& getGameTurnCount(){
         return turnCount;
     }
     Color& getColorOfPlayerTakingTurn(){
@@ -1563,7 +1563,7 @@ public:
                 */
                Board copyBoard = getBoard();
                 copyBoard.makeMove(copyBoard,legalMove,0);
-               if ( !(isKingInCheck(copyBoard,legalMove.playerColor))){ //if the move
+               if ( !(isKingInCheck(copyBoard,legalMove.playerColor))){ //if the move doesnt put your own king in check
                     //add move to list
                     if (legalMove.isPromotion){                               
                         legalMove.promotionPiece = bishop;
@@ -1579,16 +1579,8 @@ public:
                     moveListForBoard.push_back(legalMove);
                     }
                }
-            //              LEADS TO INFINITE RECURSION AS GENERATE LEGAL MOVES -> POSSIBLEBITBOARDGEN->GENERATELEGALMOVES->...
-            //    if (isKingInCheck( copyBoard , !legalMove.playerColor ) ){
-            //     //if the move leads to the opponent being in check
-            //     legalMove.isCheck = true;
-            //     std::vector<MoveInformation> legalMovesForCheckMate = generateLegalMoves(!legalMove.playerColor);
-            //     //if the move leads to the opponent having no possible moves AND is in check...    
-            //     if ( legalMovesForCheckMate.empty() ){
-            //             legalMove.isCheckMate = true;
-            //         }
-            //    }
+                        
+               
                 possibleMask &= (possibleMask - 1); //clear the bit as it is done with
             }
 
@@ -1598,6 +1590,29 @@ public:
         return moveListForBoard;
 
     }
+    void identifyCheckMateMoves(std::vector<MoveInformation> &pseudoLegalMoves, Board boardstate){
+        //the pseudoLegalMoves vector contains all moves that are possible that do not put king in check
+
+        for (int i = 0; i < pseudoLegalMoves.size();i++){
+            Board copyBoard = boardstate;
+            copyBoard.makeMove(copyBoard,pseudoLegalMoves.at(i),0);
+            if (isKingInCheck( copyBoard , !pseudoLegalMoves.at(i).playerColor ) ){
+                
+                //if the move leads to the opponent being in check
+                pseudoLegalMoves.at(i).isCheck = true;
+                std::vector<MoveInformation> legalMovesForCheckMate = generateLegalMovesOnBoard(copyBoard,!pseudoLegalMoves.at(i).playerColor);
+                Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
+                if (generateLegalMovesOnBoard(copyBoard, opponentColor).empty()) pseudoLegalMoves.at(i).isCheckMate = true;
+                else{
+                    std::cout <<"\nThese moves are preventing a checkmate:";
+                    printMoveList(generateLegalMovesOnBoard(copyBoard, opponentColor));
+                    std::cout <<"\n";
+                }
+            }
+        }
+    }
+        
+    
     std::vector<MoveInformation> generateLegalMoves(Color color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
@@ -1667,7 +1682,7 @@ public:
     
     void printMoveList(std::vector<MoveInformation> moveList){
     for (int i = 0; i < moveList.size();i++){
-        std::cout << getMoveString(moveList.at(i)) <<", ";
+        std::cout << getMoveString(moveList.at(i)) << ", ";
     }
 }
 
@@ -1954,8 +1969,11 @@ public:
         ss << move.toFile << move.toRank;
         if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
 
-        if (move.isCheck) ss << "+";
-        if (move.isCheckMate) ss << "#";
+        if (move.isCheckMate) ss << "#";  // Checkmate gets priority
+        else if (move.isCheck){
+            ss << "+";
+            //std::cout << "\nCHEESE2\n";
+        }
         return ss.str();
     } 
     
@@ -1976,7 +1994,8 @@ public:
        
         
         //printBitBoard(getBoard().getPawns(black));
-        std::cout << "Turn " << getGameTurnCount() + 1;
+        
+        std::cout << "Turn " << getGameTurnCount();
         std::string gameMoveString;
         if (turn == white) std::cout << "W | ";
         else std::cout << "B | ";
@@ -1985,7 +2004,7 @@ public:
         std::string userInputtedNotation;
         
         std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(turn);
-        
+        identifyCheckMateMoves(possibleLegalMoves,getBoard() );
         MoveInformation userMove = parseMove(turn); //need to handle typos
         int moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
         while (moveIndex == -1){ //while move is not in legal move list
@@ -2030,18 +2049,23 @@ public:
     }
     
     //GAME ENDING CONDITIONS
-    bool isKingInCheck(Board boardOfInterest, Color side){
+    bool isKingInCheck(Board boardOfInterest, Color colorOfKing){
+        //is the king of SIDE's color in check?
         //std::cout <<"\nCheckpoint C\n";
-        uint64_t kingLocation = boardOfInterest.getKing(side);
-        Color opponentColor = !side;
+        uint64_t kingLocation = boardOfInterest.getKing(colorOfKing);
+        Color opponentColor = !colorOfKing;
         uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
         //std::cout <<"\nCheckpoint D\n";
         return  ( (kingLocation & opponentMoves) != 0); //returns true on check
     }
-    bool isCheckMate(Color colorBeingChecked, Board boardState){
-        std::cout <<"\nCheckpoint A\n";
-    std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorBeingChecked);
-    std::cout <<"\nCheckpoint B\n";
+    bool isCheckMate(Color colorOfKing, Board boardState){
+        
+        if (!isKingInCheck(boardState,colorOfKing)) return false; //if the king isnt in check, it cant be mate
+        // std::cout <<"\nCheckpoint A\n";
+        std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);
+        //printMoveList(legalMoves);
+        std::cout <<"\n";
+       //  std::cout <<"\nCheckpoint B\n";
     return (legalMoves.empty());
 }
 

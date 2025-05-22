@@ -1006,9 +1006,10 @@ public:
         getEmptySquares() = ~getOccupiedSquares();
     }
     
-    void makeMove(Board &board, MoveInformation move){                  
-        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+    void makeMove(Board &board, MoveInformation move, int filterTest){  
 
+        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+        
         //this is ensured to be legal so responsibility of function is to only update the board
         Color enemyColor;
         if (move.playerColor == white){
@@ -1018,15 +1019,19 @@ public:
             enemyColor = white; 
         
         }
-    
+        
+        if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
+        
         
     
         //CAPTURES/ENPASSANT
         if (move.isCapture){
-        
+            if (filterTest) std::cout <<"\nDDDDC\n";
+            if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
             if (move.isEnpassant){
                 //place piece at en passant square...
-                std::cout<<"\nTHIS IS AN EN PASSANT MOVE\n";
+                if (filterTest) std::cout<<"\nTHIS IS AN EN PASSANT MOVE\n";
+                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); //remove piece from origin
                 board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
                 //remove pawn that was passant'd
                 int pawnToBeRemoved;
@@ -1036,12 +1041,12 @@ public:
 
                 board.removePiece(enemyColor,pawn, pawnToBeRemoved);
       
-                //remove piece from origin
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); 
+                
+                
                 return; //enPassant cannot lead to castling, promotion, etc.
             }
             else{ //traditional captures
-              std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
+              if (filterTest) std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
                 board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
                 //move the player's piece
                 board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
@@ -1084,12 +1089,13 @@ public:
         }
         //REGULAR MOVES (Passive/NonCapture)
         else if (move.isCapture == 0){ 
+            if (filterTest) std::cout <<"\nDDDDC\n";
+            board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
+            // displayBoard();
             
             board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
             // displayBoard();
             
-            board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
-            // displayBoard();
             
         }
         
@@ -1520,8 +1526,9 @@ public:
                 /*
                     CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
                 */
-               getBoard().makeMove(getBoard(),legalMove);
-               if ( !(isKingInCheck(getBoard(),legalMove.playerColor))){ //if the move
+               Board copyBoard = getBoard();
+                copyBoard.makeMove(copyBoard,legalMove,0);
+               if ( !(isKingInCheck(copyBoard,legalMove.playerColor))){ //if the move
                     //add move to list
                     if (legalMove.isPromotion){                               
                         legalMove.promotionPiece = bishop;
@@ -1537,9 +1544,8 @@ public:
                     moveListForBoard.push_back(legalMove);
                     }
                }
-               getBoard().undoMove(getBoard(),legalMove);
-
-               if (isKingInCheck( getBoard() , !legalMove.playerColor ) ){
+            
+               if (isKingInCheck( copyBoard , !legalMove.playerColor ) ){
                 //if the move leads to the opponent being in check
                 legalMove.isCheck = true;
                 std::vector<MoveInformation> legalMovesForCheckMate = generateLegalMoves(!legalMove.playerColor);
@@ -1899,6 +1905,7 @@ public:
     void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
        
         getBoard().displayBoardPolished();
+        //printBitBoard(getBoard().getPawns(black));
         std::cout << "Turn " << getGameTurnCount() + 1;
         std::string gameMoveString;
         if (turn == white) std::cout << "W | ";
@@ -1906,7 +1913,7 @@ public:
         
         std::cout << "Please make your move! (standard chess notation): ";
         std::string userInputtedNotation;
-
+        
         std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(turn);
         
         MoveInformation userMove = parseMove(turn); //need to handle typos
@@ -1931,7 +1938,8 @@ public:
 
 
         MoveInformation matchingMove = possibleLegalMoves.at(moveIndex);
-        getBoard().makeMove(getBoard(), matchingMove);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        
+        getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
         if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
         getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;
@@ -1941,10 +1949,13 @@ public:
         else{
             getBoard().enPassantTargetSquare = -1;
         }
-
-        boardStates.push_back(getBoard()); //adds the new (post-move) board to the game history
+        Board newBoard = getBoard();
+        boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
         masterMoveList.push_back(matchingMove); //adds the move to bridge between board states
         getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
+        // printBitBoard(getBoard().getPawns(white));
+        // printBitBoard(getBoard().getPawns(black));
+        getBoard().displayBoardPolished();
     }
     
     //GAME ENDING CONDITIONS

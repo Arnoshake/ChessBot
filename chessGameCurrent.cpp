@@ -1290,43 +1290,32 @@ public:
     }
     uint64_t& getPieces(Color color){
         if (color == white) return whitePieces;
-        if (color == black) return blackPieces;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackPieces;
     }
     uint64_t& getPawns(Color color){
         if (color == white) return whitePawns;
-        if (color == black) return blackPawns;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackPawns;
     }
     uint64_t& getKnights(Color color){
         if (color == white) return whiteKnights;
-        if (color == black) return blackKnights;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackKnights;
+    
     }
     uint64_t& getBishops(Color color){
         if (color == white) return whiteBishops;
-        if (color == black) return blackBishops;
+        return blackBishops;
     }
     uint64_t& getRooks(Color color){
         if (color == white) return whiteRooks;
-        if (color == black) return blackRooks;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackRooks;
     }
     uint64_t& getQueens(Color color){
         if (color == white) return whiteQueens;
-        if (color == black) return blackQueens;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackQueens;
     }
     uint64_t& getKing(Color color){
         if (color == white) return whiteKings;
-        if (color == black) return blackKings;
-        uint64_t dummy = 0ULL;
-        return dummy;
+        return blackKings;
     }
    
     uint64_t& getFriendlyPieces(){

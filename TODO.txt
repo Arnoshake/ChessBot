@@ -1,6 +1,6 @@
 TO DO:
-    update legalMoves to prevent king being in check
-
-    fix the bug where black had wrong rank/file but the right move (orientation issue)
-
-    write checkmate/game ending stuff
+    checkmate notation --> how to determine if moves are checkmate and properly append it to the notation in legal moves list --> Current implementation leads to inf recursion
+        Annoying but not highest priority. Game still ends properly
+    print or save board states and moves
+    castling
+    ambiguous moves

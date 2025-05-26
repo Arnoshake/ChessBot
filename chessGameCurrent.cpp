@@ -508,7 +508,7 @@ class MoveInformation{
             isQueenCastle = false;
             toRank = 0;
             toFile = 0;
-            fromValue = 0;
+            fromValue = 'z';
             pieceType = none;
             promotionPiece = none;
             capturedPiece = none;
@@ -1978,19 +1978,39 @@ public:
     } 
     
     //MAKING MOVE
+    MoveInformation getMatchingMove(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){
+        std::vector<MoveInformation> candidates;
+        for (MoveInformation move : moveList){
+            //if attributes do not match, cant be the same move
+            if (targetMove.toSquare != move.toSquare) continue;
+            if (targetMove.isCapture != move.isCapture) continue;
+            if ( (targetMove.isPromotion != move.isPromotion) || (targetMove.promotionPiece != move.promotionPiece) ) continue;
+            if (targetMove.isEnpassant != move.isEnpassant) continue;
+            if (targetMove.isCheck != move.isCheck) continue;
+            if (targetMove.isCheckMate != move.isCheckMate) continue;
+            if (targetMove.isAmbiguous != targetMove.isAmbiguous) continue;
+            //from square is not considered because it is not set/determined by inputtedMove or chess notation... requires context of board
+            if (targetMove.isAmbiguous && (targetMove.fromValue != move.fromValue) ) continue;
+
+            candidates.push_back(move);
+        }
+        if (candidates.empty()) throw std::runtime_error("No matching legal move found: possibly invalid move input.");
+        if (candidates.size() > 1)  throw std::runtime_error("Ambiguous move input: multiple matching legal moves found.");
+        return candidates.at(0);
+    }
     int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
         //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
         for (int i = 0; i < moveList.size(); i++) {
             // std::cout << getMoveString(targetMove) << " vs " << getMoveString(moveList.at(i)) << std::endl; testing move find
-            if(targetMove.chessNotation == getMoveString(moveList.at(i)) ){
-                // std::cout << targetMove.fromSquare << " vs " << moveList.at(i).fromSquare; comparing attributes
+            if( (targetMove.toSquare == moveList.at(i).toSquare) ) {
+                // if they are moving to same place
                 
                 return i;
             }
         }
         return -1; //no index for move in list
     }
-    void takeGameHalfTurn(Color turn){                                                         // NEED TO EXTRACT USER INPUTTING FROM THE PARSEMOVE FUNCTION...
+    void takeGameHalfTurn(Color turn){                                                        
        
         
         //printBitBoard(getBoard().getPawns(black));

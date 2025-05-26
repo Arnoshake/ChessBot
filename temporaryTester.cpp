@@ -6,32 +6,57 @@
 #include <cstdint>
 #include "chessGameCurrent.cpp"
 #include <fstream> //included to write to output file
-
-
+#include <vector>
 
 int main() {
-    Board board;
-    printBitBoard(board.getWhitePawn());
-    board.addPiece(white,pawn,a3);
-    //printBitBoard(board.getWhitePawn());
-    board.addPiece(black,pawn,b4);
-    //board.updateFriendlyEnemy(white);
+    init_sliders_attacks(0);
+    init_sliders_attacks(1);
+    Game game;
+    //game.getBoard().addPiece(black,pawn,d4);
+  
+   
+                    
+    while (1){
+        game.getGameTurnCount()++;
+        game.getBoard().updateFriendlyEnemy(white);
+    std::vector<MoveInformation> moveList = game.generateLegalMoves(white); //for checking if its end of game...
+    // game.identifyCheckMateMoves(moveList,game.getBoard( ) );
+    game.getBoard().displayBoardPolished();
+    game.takeGameHalfTurn(white);
 
-    std::cout << "Before move:\n";
-    printBitBoard(board.getWhitePawn());
-    printBitBoard(board.getBlackPawn());
-    MoveInformation move(white, pawn, a3, b4,pawn);
-
-
-    board.makeMove(board, move);  // ← make sure this is pass-by-reference
-
-    std::cout << "After move:\nPawn:\n";
-    printBitBoard(board.getWhitePawn());
-    printBitBoard(board.getBlackPawn());                                    //THIS NEEDS TO BE FIXED!!!
-    board.undoMove(board, move);  // ← make sure this is pass-by-reference
-    std::cout << "After undo:\n";
-    printBitBoard(board.getWhitePawn());
-    printBitBoard(board.getBlackPawn());
-
+    if (moveList.empty() && !game.isCheckMate(black,game.getBoard())) break; //no legal moves but not mate
+    if (game.isCheckMate(black,game.getBoard())){
+        game.winner = 1;
+        break;
+    }
+    game.getBoard().updateFriendlyEnemy(black);
+    moveList = game.generateLegalMoves(black);
+    game.identifyCheckMateMoves(moveList,game.getBoard( ) );
+    //printBitBoard(game.getBoard().getPawnMask(d4,black));
+     std::cout<<"\n<------HALF TURN ------>\n";
+    game.getBoard().displayBoardPolished();
+    game.takeGameHalfTurn(black);
+    //printBitBoard(game.getBoard().getPawns(black));
+    
+    if (moveList.empty() && !game.isCheckMate(white,game.getBoard())) break; //no legal moves but not mate
+    if (game.isCheckMate(white,game.getBoard())){                                                                                   //ISSUE RIGHT HERE!!!!
+        game.winner = -1;
+        break;
+    }
+    std::cout<<"\n<------<>------>\n";
+    }
+    std::cout << "\n\n";
+    if (game.winner == 1){
+        std::cout<<"WHITE WINS!\n";
+    }
+    if (game.winner == -1){
+        std::cout<<"BLACK WINS!\n";
+    }
+    if (game.winner == 0){
+        std::cout<<"STALEMATE!\n";
+    }
+    
+    
+    std::cout <<"\nExiting the Program...\n";
     return 0;
 }

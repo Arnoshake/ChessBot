@@ -486,12 +486,14 @@ class MoveInformation{
         std::string chessNotation;
         bool isCheck, isCheckMate, isCapture, isAmbiguous, isPromotion, isEnpassant;
         bool isKingCastle, isQueenCastle;
-        char toRank, toFile, fromValue;
+        char toRank, toFile;
         Piece pieceType, promotionPiece, capturedPiece;             
 
         int toSquare;
         int fromSquare;
 
+        char fromFile, fromRank; //used for ambiguity
+        bool uniqueFile, uniqueRank;
         int turn;
         Color playerColor;
         
@@ -508,7 +510,10 @@ class MoveInformation{
             isQueenCastle = false;
             toRank = 0;
             toFile = 0;
-            fromValue = 'z';
+            fromFile = '\0';
+            uniqueFile = false;
+            fromRank = '\0';
+            uniqueRank = false;
             pieceType = none;
             promotionPiece = none;
             capturedPiece = none;
@@ -517,6 +522,8 @@ class MoveInformation{
             turn = 0;
             playerColor = white; 
         }
+
+        MoveInformation(Piece pieceType1, bool isCapture1, Piece capturedPiece1, bool isAmbiguous1, bool isEnpassant1, bool isPromotion1, Piece promotionPiece1){}
 //         MoveInformation(Color color, Piece piece, int from, int to,Piece capturedPieceParam,bool capture = true) {
 //     playerColor = color;
 //     pieceType = piece;
@@ -559,7 +566,7 @@ class MoveInformation{
     std::cout << "Piece Moved: " << getPieceLetter(pieceType) << "\n";
     std::cout << "From: " << getSquareName(fromSquare) << " (" << fromSquare << ")\n";
     std::cout << "To: " << getSquareName(toSquare) << " (" << toSquare << ")\n";
-
+    std::cout <<"Flags ( [capture][promotion][enPassant][check][checkmate][ambig]):" << isCapture << isPromotion << isEnpassant << isCheck << isCheckMate <<isAmbiguous << "\n";
     if (isCapture) {
         std::cout << "Captured: " << getPieceLetter(capturedPiece) << "\n";
     }
@@ -573,7 +580,7 @@ class MoveInformation{
     if (isQueenCastle) std::cout << "Special: Queenside Castle\n";
     if (isCheck) std::cout << "Check: Yes\n";
     if (isCheckMate) std::cout << "Checkmate: Yes\n";
-    if (isAmbiguous) std::cout << "Note: Move was ambiguous\n";
+    if (isAmbiguous) std::cout << "Note: Move was ambiguous | " << fromFile <<  ", " <<fromRank<<".\n";
 
     std::cout << "Algebraic Notation: " << chessNotation << "\n";
     std::cout << "========================\n";
@@ -1416,8 +1423,6 @@ void displayBoardPolished() {
 
 };
 
-    
-
 
 class Game
 {
@@ -1604,16 +1609,45 @@ public:
                 Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
                 if (generateLegalMovesOnBoard(copyBoard, opponentColor).empty()) pseudoLegalMoves.at(i).isCheckMate = true;
                 else{
-                    std::cout <<"\nThese moves are preventing a checkmate:";
-                    printMoveList(generateLegalMovesOnBoard(copyBoard, opponentColor));
-                    std::cout <<"\n";
+                    // std::cout <<"\nThese moves are preventing a checkmate:";
+                    // printMoveList(generateLegalMovesOnBoard(copyBoard, opponentColor));
+                    // std::cout <<"\n";
                 }
             }
         }
     }
         
+    void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
+        //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
+        //void because it will edit the list of moves directly
+        for (auto& move : legalMovesList) {
+            std::vector<MoveInformation> conflictingMoves;
+            for (const auto& other : legalMovesList) {
     
-    std::vector<MoveInformation> generateLegalMoves(Color color){ 
+                if (&move == &other || (move.isAmbiguous )) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
+                if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
+                    conflictingMoves.push_back(other);
+                }
+                if (!conflictingMoves.empty()){ //if conflicting moves exist (ambiguity!)
+                    move.isAmbiguous = true;
+                    bool fileUnique = true, rankUnique = true;
+                    if ( (move.fromSquare%8) == (other.fromSquare%8) ) fileUnique = false;
+                    if ( (move.fromSquare/8) == (other.fromSquare/8) ) rankUnique = false;
+
+                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
+                    if (fileUnique) {
+                        move.fromFile = 'a' + (move.fromSquare % 8); // e.g., 'b'
+                    } 
+                    if (rankUnique) {
+                        move.fromRank = '1' + (move.fromSquare / 8); // e.g., '4'
+                    } 
+                }
+            }
+           
+        }
+        
+    }
+    std::vector<MoveInformation> generateLegalMoves(Board boardstate, Color color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
         movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
@@ -1636,13 +1670,15 @@ public:
 
         movesToAdd.clear();                                                             // is this necessary?
         if (canKingCastle(color)){
-            movesToAdd.push_back(createMoveFromString(color, "O-O"));
+            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
         if (canQueenCastle(color)){
-            movesToAdd.push_back(createMoveFromString(white, "O-O-O"));
+            movesToAdd.push_back(createMoveFromString(board, white, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-
+        identifyCheckMateMoves(allLegalMoves,boardstate);
+        
+        findAmbiguousMoves(allLegalMoves);
         return allLegalMoves;
     }
     std::vector<MoveInformation> generateLegalMovesOnBoard(Board& board, Color color){
@@ -1668,10 +1704,10 @@ public:
 
         movesToAdd.clear();                                                             // is this necessary?
         if (canKingCastle(color)){
-            movesToAdd.push_back(createMoveFromString(color, "O-O"));
+            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
         if (canQueenCastle(color)){
-            movesToAdd.push_back(createMoveFromString(white, "O-O-O"));
+            movesToAdd.push_back(createMoveFromString(board,color, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
@@ -1737,7 +1773,7 @@ public:
         move.playerColor = playerColor;
         move.isAmbiguous = false;
         // std::cout << moveStr << std::endl;
-        switch (moveStr.at(0)){ //piece type
+        switch (moveStr.at(0)){ //piece type               
 
             case 'B':
                 move.pieceType = bishop;
@@ -1809,10 +1845,16 @@ public:
         }
         // std::cout << moveStr << std::endl;
         //std::cout << "boop";
-        if (moveStr.length() == 1 && ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') )) 
+        if (moveStr.length() == 1) 
         {
             move.isAmbiguous = true;
-            move.fromValue = moveStr.at(0);
+            if (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') move.fromFile = moveStr.at(0);
+            if (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') move.fromRank = moveStr.at(0);
+            
+        }
+        if (moveStr.length() == 2){                                                     //DOUBLE AMBIGUITY CASE...UNSURE!
+            move.fromFile = moveStr.at(0); 
+            move.fromRank = moveStr.at(1);
         }
     
         // std::cout << moveStr << std::endl;
@@ -1826,8 +1868,8 @@ public:
         //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
         return move;
     }
-    MoveInformation createMoveFromString(Color playerColor, std::string chessNotation){
-    
+    MoveInformation createMoveFromString(Board boardWaitingForMove, Color playerColor, std::string chessNotation){
+        //assuming a possible chess notation (ex: NOT 1 character length)
         std::string moveStr = chessNotation; // will be editing this
         MoveInformation move;
         move.chessNotation = moveStr;
@@ -1864,7 +1906,7 @@ public:
             }
         }
         
-        move.isAmbiguous = false;
+        move.isAmbiguous = false;                                       //all moves are considered not ambigious at the moment....
         // std::cout << moveStr << std::endl;
         switch (moveStr.at(0)){ //piece type
 
@@ -1889,7 +1931,7 @@ public:
                 moveStr = moveStr.substr(1);
                 break;
             default:
-                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') ){
+                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') || (moveStr.at(0) == 'x')){
                     move.pieceType = pawn;
                 }
                 else{
@@ -1927,32 +1969,43 @@ public:
 
         //std::cout << moveStr << std::endl;
         // the last thing in the move string at this point must be the "to" information
-        move.toRank = moveStr.at(moveStr.length() - 1);
-        move.toFile = moveStr.at(moveStr.length() - 2);
-        moveStr = moveStr.substr(0, moveStr.length() - 2);
+        move.toRank = moveStr.at(moveStr.length() - 1) ;
+        moveStr = moveStr.substr(0, moveStr.length() - 1);
+
+        move.toFile = moveStr.at(moveStr.length() - 1) ;                       
+        //std::cout <<"\nFile: " << move.toFile << " Rank: " << move.toRank << "\n";
+        moveStr = moveStr.substr(0, moveStr.length() - 1);
         // std::cout << moveStr << std::endl;
+        int asciiFile = static_cast<int>(move.toFile) - 96; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
+        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '1' ); // casting both rank and file to integers and calculating the square index
         if (move.isCapture)
         {
             moveStr = moveStr.substr(0, moveStr.length() - 1);
+            move.capturedPiece = boardWaitingForMove.getPieceAtSquare(move.toSquare);
             // thing before to square, if capture is 'x'
         }
         // std::cout << moveStr << std::endl;
         //std::cout << "boop";
-        if (moveStr.length() == 1 && ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') )) 
+        if (moveStr.length() == 1) 
         {
             move.isAmbiguous = true;
-            move.fromValue = moveStr.at(0);
+            if (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') move.fromFile = moveStr.at(0);
+            if (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') move.fromRank = moveStr.at(0);
+            
         }
-    
+        if (moveStr.length() == 2){                                                     //DOUBLE AMBIGUITY CASE...UNSURE!
+            move.fromFile = moveStr.at(0); 
+            move.fromRank = moveStr.at(1);
+        }
         // std::cout << moveStr << std::endl;
 
         // square = File * 8 + Rank
         // a = 1
         // rank = numbers, File == files
         
-        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
+        
         //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
+        
         return move;
 
 
@@ -1962,7 +2015,13 @@ public:
         std::stringstream ss;
         if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
         
-        if (move.isAmbiguous) ss << move.fromValue;
+        if (move.isAmbiguous){
+            if (move.uniqueFile) ss << "t";//('a' + move.fromFile);
+            else if (move.uniqueRank) ss << "T";//('1' + move.fromFile);
+            else{
+                ss << "tT";//('a' + move.fromFile) << ('1' + move.fromFile);
+            }
+        }
         
         if (move.isCapture) ss << 'x';
         
@@ -1979,74 +2038,68 @@ public:
     
     //MAKING MOVE
     MoveInformation getMatchingMove(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){
+        printMoveList(moveList);
         std::vector<MoveInformation> candidates;
+        int iteration = 0;
         for (MoveInformation move : moveList){
+            iteration++;
             //if attributes do not match, cant be the same move
-            if (targetMove.toSquare != move.toSquare) continue;
-            if (targetMove.isCapture != move.isCapture) continue;
+            if(targetMove.pieceType != move.pieceType) continue;
+            if (targetMove.toSquare != move.toSquare)continue;
+            if ( (targetMove.isCapture != move.isCapture)|| (targetMove.capturedPiece != move.capturedPiece)) continue;
             if ( (targetMove.isPromotion != move.isPromotion) || (targetMove.promotionPiece != move.promotionPiece) ) continue;
             if (targetMove.isEnpassant != move.isEnpassant) continue;
             if (targetMove.isCheck != move.isCheck) continue;
             if (targetMove.isCheckMate != move.isCheckMate) continue;
-            if (targetMove.isAmbiguous != targetMove.isAmbiguous) continue;
+            if (targetMove.isAmbiguous != move.isAmbiguous) continue;
             //from square is not considered because it is not set/determined by inputtedMove or chess notation... requires context of board
-            if (targetMove.isAmbiguous && (targetMove.fromValue != move.fromValue) ) continue;
-
+            if (targetMove.isAmbiguous && ( (targetMove.uniqueFile != move.uniqueFile) || (targetMove.uniqueRank != move.uniqueRank) || (targetMove.fromFile != move.fromFile)  || (targetMove.fromRank != move.fromRank) ) ) continue;
+            //if (targetMove.chessNotation != move.chessNotation) continue;                         LEGAL MOVE GEN DOES NOT STORE CHESS NOTATION
+            std::cout<< "\nITERATION " << iteration << "\n";
+            move.printMoveInfo();
             candidates.push_back(move);
         }
         if (candidates.empty()) throw std::runtime_error("No matching legal move found: possibly invalid move input.");
-        if (candidates.size() > 1)  throw std::runtime_error("Ambiguous move input: multiple matching legal moves found.");
+        if (candidates.size() > 1){
+            
+            for (MoveInformation move : candidates) move.printMoveInfo();
+            std::cout << std::endl;
+            throw std::runtime_error("Ambiguous move input: multiple matching legal moves found.");
+        }
         return candidates.at(0);
     }
-    int moveIndexInLegalList(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove) { //this method is chatGPT'd
-        //finds the index of the matching move (based off chess notation). This will let me access the possibleMoveList and obtain the move and play it
-        for (int i = 0; i < moveList.size(); i++) {
-            // std::cout << getMoveString(targetMove) << " vs " << getMoveString(moveList.at(i)) << std::endl; testing move find
-            if( (targetMove.toSquare == moveList.at(i).toSquare) ) {
-                // if they are moving to same place
-                
-                return i;
-            }
-        }
-        return -1; //no index for move in list
-    }
-    void takeGameHalfTurn(Color turn){                                                        
+   void takeGameHalfTurn(Color turn){                                                        
        
         
         //printBitBoard(getBoard().getPawns(black));
         
         std::cout << "Turn " << getGameTurnCount();
         std::string gameMoveString;
-        if (turn == white) std::cout << "W | ";
-        else std::cout << "B | ";
+        if (turn == white) std::cout << "W.";
+        else std::cout << "B.";
         
-        std::cout << "Please make your move! (standard chess notation): ";
-        std::string userInputtedNotation;
-        
-        std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(turn);
-        identifyCheckMateMoves(possibleLegalMoves,getBoard() );
-        MoveInformation userMove = parseMove(turn); //need to handle typos
-        int moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
-        while (moveIndex == -1){ //while move is not in legal move list
-        std::cout<< "Illegal Move! Please try another move!\n";
-        std::cout << "(";
-        printMoveList(possibleLegalMoves);
-        std::cout << ")\n";
-        userMove = parseMove(turn);
-        moveIndex = moveIndexInLegalList(possibleLegalMoves,userMove) ;
+        std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(getBoard(), turn);
+        //identifyCheckMateMoves(possibleLegalMoves,getBoard() );
+        MoveInformation matchingMove; //initialized inside loop
+        while (true) {
+            std::string userInput;
+            std::cout << "\nPlease make your move! (standard chess notation): ";
+            std::cin >> userInput;
+            MoveInformation userInputtedMove = createMoveFromString(getBoard(),turn,userInput);
+            userInputtedMove.printMoveInfo();
+
+
+            try {
+                matchingMove = getMatchingMove(possibleLegalMoves, userInputtedMove);
+                break; // exit the loop since we found a valid move
+            }
+            catch (const std::runtime_error& e) {
+                std::cout << "Error: " << e.what() << "\n";
+                std::cout << "Please enter a valid move.\n";
+                printMoveList(possibleLegalMoves);
+            }
         }
-        
-        
-        //a move has been selected. if it is a double push, add en passantTargetSquare.
-        //when the other player makes their move, the square will be reset or updated
-        //chat generated
-        
 
-
-
-
-
-        MoveInformation matchingMove = possibleLegalMoves.at(moveIndex);
         matchingMove.printMoveInfo();
         
         getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
@@ -2090,8 +2143,8 @@ public:
 }
 
     bool isStaleMate(Board boardState){     //NEED TO ADD 50 HALFMOVE GAME RULE
-        std::vector<MoveInformation> whiteMoves = generateLegalMoves(white);
-        std::vector<MoveInformation> blackMoves = generateLegalMoves(black);
+        std::vector<MoveInformation> whiteMoves = generateLegalMoves(boardState, white);
+        std::vector<MoveInformation> blackMoves = generateLegalMoves(boardState,black);
         return ( (whiteMoves.empty() && !isCheckMate(white,boardState)) || (blackMoves.empty() && !isCheckMate(black,boardState)) );
         //if its not mate but player cant move
     }

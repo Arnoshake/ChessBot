@@ -4,3 +4,16 @@ TO DO:
     print or save board states and moves
     castling
     ambiguous moves
+
+
+    add chessNotation attribute to stored legal moves (reduces function calls, easier for debugging later)
+
+
+        I need to adjust/fix the findAmbigousMoves method. Once a move has been made ambigiuous, LEAVE IT ALONE!
+        
+        TUESDAY
+        Ambigious moves (update chess notation stuff and make moves actually properly execute)
+        castling
+        saving board states
+        WEDNESDAY
+        return to the checkmate issue

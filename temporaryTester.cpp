@@ -19,7 +19,7 @@ int main() {
     while (1){
         game.getGameTurnCount()++;
         game.getBoard().updateFriendlyEnemy(white);
-    std::vector<MoveInformation> moveList = game.generateLegalMoves(white); //for checking if its end of game...
+    std::vector<MoveInformation> moveList = game.generateLegalMoves(game.getBoard(),white); //for checking if its end of game...
     // game.identifyCheckMateMoves(moveList,game.getBoard( ) );
     game.getBoard().displayBoardPolished();
     game.takeGameHalfTurn(white);
@@ -30,7 +30,7 @@ int main() {
         break;
     }
     game.getBoard().updateFriendlyEnemy(black);
-    moveList = game.generateLegalMoves(black);
+    moveList = game.generateLegalMoves(game.getBoard(),black);
     game.identifyCheckMateMoves(moveList,game.getBoard( ) );
     //printBitBoard(game.getBoard().getPawnMask(d4,black));
      std::cout<<"\n<------HALF TURN ------>\n";

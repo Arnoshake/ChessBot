@@ -1570,6 +1570,7 @@ public:
                 copyBoard.makeMove(copyBoard,legalMove,0);
                if ( !(isKingInCheck(copyBoard,legalMove.playerColor))){ //if the move doesnt put your own king in check
                     //add move to list
+                    legalMove.chessNotation = getMoveString(legalMove);
                     if (legalMove.isPromotion){                               
                         legalMove.promotionPiece = bishop;
                         moveListForBoard.push_back(legalMove);
@@ -1613,6 +1614,7 @@ public:
                     // printMoveList(generateLegalMovesOnBoard(copyBoard, opponentColor));
                     // std::cout <<"\n";
                 }
+        
             }
         }
     }
@@ -1621,28 +1623,43 @@ public:
         //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
         //void because it will edit the list of moves directly
         for (auto& move : legalMovesList) {
-            std::vector<MoveInformation> conflictingMoves;
+            std::vector<MoveInformation> conflictingMovesList;
             for (const auto& other : legalMovesList) {
     
-                if (&move == &other || (move.isAmbiguous )) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
+                if (&move == &other ) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
                 if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
-                    conflictingMoves.push_back(other);
-                }
-                if (!conflictingMoves.empty()){ //if conflicting moves exist (ambiguity!)
-                    move.isAmbiguous = true;
-                    bool fileUnique = true, rankUnique = true;
-                    if ( (move.fromSquare%8) == (other.fromSquare%8) ) fileUnique = false;
-                    if ( (move.fromSquare/8) == (other.fromSquare/8) ) rankUnique = false;
-
-                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
-                    if (fileUnique) {
-                        move.fromFile = 'a' + (move.fromSquare % 8); // e.g., 'b'
-                    } 
-                    if (rankUnique) {
-                        move.fromRank = '1' + (move.fromSquare / 8); // e.g., '4'
-                    } 
+                    conflictingMovesList.push_back(other);
                 }
             }
+            if (!conflictingMovesList.empty()){ //if conflicting moves exist (ambiguity!)
+                    move.isAmbiguous = true;
+                    bool fileSufficient = true, rankSufficient = true;
+                    
+                    for (auto& conflictingMove : conflictingMovesList){
+                        if ( (conflictingMove.fromSquare%8) == (move.fromSquare%8) ) fileSufficient = false;
+                        
+                        if ( (conflictingMove.fromSquare/8) == (move.fromSquare/8) ) rankSufficient = false;
+                    
+                    }
+                    
+
+                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
+                    if (fileSufficient) {
+                        move.fromFile = 'a' + (move.fromSquare % 8); 
+                        move.uniqueFile = true;
+                        
+                    } 
+                    if (rankSufficient) {
+                        move.fromRank = '1' + (move.fromSquare / 8); 
+                        move.uniqueRank = true;
+                    } 
+                    if (!rankSufficient && !fileSufficient) {
+                        move.fromRank = '1' + (move.fromSquare / 8); 
+                        move.fromFile = 'a' + (move.fromSquare % 8); 
+                        move.uniqueRank = true;
+                        move.uniqueFile = true;
+                    } 
+                }
            
         }
         
@@ -1676,9 +1693,12 @@ public:
             movesToAdd.push_back(createMoveFromString(board, white, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-        identifyCheckMateMoves(allLegalMoves,boardstate);
         
-        findAmbiguousMoves(allLegalMoves);
+        identifyCheckMateMoves(allLegalMoves,boardstate); //removes moves that put oneself in check
+        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+        for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
+            moves.chessNotation = getMoveString(moves);
+        }
         return allLegalMoves;
     }
     std::vector<MoveInformation> generateLegalMovesOnBoard(Board& board, Color color){
@@ -2014,13 +2034,18 @@ public:
     {
         std::stringstream ss;
         if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
-        
+            
         if (move.isAmbiguous){
-            if (move.uniqueFile) ss << "t";//('a' + move.fromFile);
-            else if (move.uniqueRank) ss << "T";//('1' + move.fromFile);
-            else{
-                ss << "tT";//('a' + move.fromFile) << ('1' + move.fromFile);
-            }
+            if (!move.uniqueFile && move.uniqueRank) {
+                ss << move.fromRank; 
+            } 
+            else if (move.uniqueFile && !move.uniqueRank) {
+                ss << move.fromFile;
+            } 
+            else { // both are needed
+                ss << move.fromFile;
+                ss << move.fromRank;
+    }
         }
         
         if (move.isCapture) ss << 'x';
@@ -2037,12 +2062,11 @@ public:
     } 
     
     //MAKING MOVE
-    MoveInformation getMatchingMove(const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){
+    MoveInformation getMatchingMove(Board boardState,const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){
         printMoveList(moveList);
         std::vector<MoveInformation> candidates;
-        int iteration = 0;
         for (MoveInformation move : moveList){
-            iteration++;
+
             //if attributes do not match, cant be the same move
             if(targetMove.pieceType != move.pieceType) continue;
             if (targetMove.toSquare != move.toSquare)continue;
@@ -2051,20 +2075,20 @@ public:
             if (targetMove.isEnpassant != move.isEnpassant) continue;
             if (targetMove.isCheck != move.isCheck) continue;
             if (targetMove.isCheckMate != move.isCheckMate) continue;
-            if (targetMove.isAmbiguous != move.isAmbiguous) continue;
+            //dont check ambiguity flag... check the more appliciable,related markers that imply ambiguity
+            if (targetMove.uniqueFile && targetMove.fromFile != (move.fromSquare % 8) ) continue;
+            if (targetMove.uniqueRank && targetMove.fromRank != (move.fromSquare / 8) ) continue;
             //from square is not considered because it is not set/determined by inputtedMove or chess notation... requires context of board
-            if (targetMove.isAmbiguous && ( (targetMove.uniqueFile != move.uniqueFile) || (targetMove.uniqueRank != move.uniqueRank) || (targetMove.fromFile != move.fromFile)  || (targetMove.fromRank != move.fromRank) ) ) continue;
-            //if (targetMove.chessNotation != move.chessNotation) continue;                         LEGAL MOVE GEN DOES NOT STORE CHESS NOTATION
-            std::cout<< "\nITERATION " << iteration << "\n";
-            move.printMoveInfo();
+            //if (targetMove.isAmbiguous && ( (targetMove.uniqueFile != move.uniqueFile) || (targetMove.uniqueRank != move.uniqueRank)  )) continue;
+            if (targetMove.chessNotation != move.chessNotation) continue;                         //LEGAL MOVE GEN DOES NOT STORE CHESS NOTATION... it does now!!!
             candidates.push_back(move);
         }
-        if (candidates.empty()) throw std::runtime_error("No matching legal move found: possibly invalid move input.");
+        if (candidates.empty()) throw std::runtime_error("\nNo matching legal move found: possibly invalid move input.\n");
         if (candidates.size() > 1){
             
             for (MoveInformation move : candidates) move.printMoveInfo();
             std::cout << std::endl;
-            throw std::runtime_error("Ambiguous move input: multiple matching legal moves found.");
+            throw std::runtime_error("\nAmbiguous move input: multiple matching legal moves found.\n");
         }
         return candidates.at(0);
     }
@@ -2090,14 +2114,16 @@ public:
 
 
             try {
-                matchingMove = getMatchingMove(possibleLegalMoves, userInputtedMove);
+                matchingMove = getMatchingMove(getBoard(),possibleLegalMoves, userInputtedMove);
+                matchingMove.printMoveInfo();
                 break; // exit the loop since we found a valid move
             }
             catch (const std::runtime_error& e) {
-                std::cout << "Error: " << e.what() << "\n";
+                std::cout << "\nError: " << e.what() << "\n";
                 std::cout << "Please enter a valid move.\n";
                 printMoveList(possibleLegalMoves);
             }
+        
         }
 
         matchingMove.printMoveInfo();

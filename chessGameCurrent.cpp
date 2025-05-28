@@ -1263,15 +1263,35 @@ public:
         
         
     } 
-    
+    bool isSquareInCheck(Board boardOfInterest, Square squareOfInterest, Color colorOfSquare){
+       
+        Color opponentColor = !colorOfSquare;
+        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
+        //std::cout <<"\nCheckpoint D\n";
+        return  ( (squareOfInterest & opponentMoves) != 0); //returns true on check
+    }
     bool canKingCastle(Board boardState, int color){ //check for if any of the 4 squares of relevance are in check... done later
-        if (color == white && (boardState.getPieceAtSquare(e1) == king) && (boardState.getPieceAtSquare(h1) == rook) && ((boardState.getPieceAtSquare(f1) == none)) && (boardState.getPieceAtSquare(g1) == none) && whiteCastlePrivelege) return true;
-        if (color == black && (boardState.getPieceAtSquare(e8) == king) && (boardState.getPieceAtSquare(h8) == rook) && ((boardState.getPieceAtSquare(f8) == none)) && (boardState.getPieceAtSquare(g8) == none) && blackCastlePrivelege) return true;
+        if (color == white && (boardState.getPieceAtSquare(e1) == king && !isSquareInCheck(boardState,e1,white)) 
+                            && (boardState.getPieceAtSquare(h1) == rook && !isSquareInCheck(boardState,h1,white)) 
+                            && ((boardState.getPieceAtSquare(f1) == none) && !isSquareInCheck(boardState,f1,white)) 
+                            && (boardState.getPieceAtSquare(g1) == none && !isSquareInCheck(boardState,g1,white)) && whiteCastlePrivelege) return true;
+        if (color == black && (boardState.getPieceAtSquare(e8) == king && !isSquareInCheck(boardState,e8,black))
+                             && (boardState.getPieceAtSquare(h8) == rook && !isSquareInCheck(boardState,h8,black)) 
+                             && ((boardState.getPieceAtSquare(f8) == none) && !isSquareInCheck(boardState,f8,black)) 
+                             && (boardState.getPieceAtSquare(g8) == none && !isSquareInCheck(boardState,g8,black)) 
+                             && blackCastlePrivelege) return true;
         return false;
     }
-    bool canQueenCastle(Board boardState, int color){ //check for if any of the 4 squares of relevance are in check... done later 
-        if (color == white && (boardState.getPieceAtSquare(e1) == king) && (boardState.getPieceAtSquare(a1) == rook) && ((boardState.getPieceAtSquare(c1) == none)) && (boardState.getPieceAtSquare(d1) == none) && whiteCastlePrivelege) return true;
-        if (color == black && (boardState.getPieceAtSquare(e8) == king) && (boardState.getPieceAtSquare(a8) == rook) && ((boardState.getPieceAtSquare(c8) == none)) && (boardState.getPieceAtSquare(d8) == none) && blackCastlePrivelege) return true;
+    bool canQueenCastle(Board boardState, int color){ //ensures piece in right location + not in check
+        if (color == white && (boardState.getPieceAtSquare(e1) == king && !isSquareInCheck(boardState,e1,white)) 
+                            && (boardState.getPieceAtSquare(a1) == rook && !isSquareInCheck(boardState,a1,white)) 
+                            && ((boardState.getPieceAtSquare(b1) == none) && !isSquareInCheck(boardState,b1,white)) 
+                            && (boardState.getPieceAtSquare(c1) == none && !isSquareInCheck(boardState,c1,white)) && whiteCastlePrivelege) return true;
+        if (color == black && (boardState.getPieceAtSquare(e8) == king && !isSquareInCheck(boardState,e8,black))
+                             && (boardState.getPieceAtSquare(a8) == rook && !isSquareInCheck(boardState,a8,black)) 
+                             && ((boardState.getPieceAtSquare(b8) == none) && !isSquareInCheck(boardState,b8,black)) 
+                             && (boardState.getPieceAtSquare(c8) == none && !isSquareInCheck(boardState,c8,black)) 
+                             && blackCastlePrivelege) return true;
         return false;
     }
     

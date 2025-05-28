@@ -1,19 +1,11 @@
 TO DO:
-    checkmate notation --> how to determine if moves are checkmate and properly append it to the notation in legal moves list --> Current implementation leads to inf recursion
-        Annoying but not highest priority. Game still ends properly
-    print or save board states and moves
-    castling
-    ambiguous moves
+    
+    
 
+    castling (TESTING OF WRITTEN FUNCTIONS)
+    ambiguous moves --> accurate ambiguity markers (only use as many as are needed)
+    checkmate notation --> how to determine if moves are checkmate and properly append it to the notation in legal moves list --> Current implementation leads to inf recursion (Annoying but not highest priority. Game still ends properly)
 
-    add chessNotation attribute to stored legal moves (reduces function calls, easier for debugging later)
+    saving board states (need to create a board --> FEN) NOT NEEDED UNTIL AFTER FULLY WORKING GAME
 
-
-        I need to adjust/fix the findAmbigousMoves method. Once a move has been made ambigiuous, LEAVE IT ALONE!
-        
-        TUESDAY
-        Ambigious moves (update chess notation stuff and make moves actually properly execute)
-        castling
-        saving board states
-        WEDNESDAY
-        return to the checkmate issue
+    

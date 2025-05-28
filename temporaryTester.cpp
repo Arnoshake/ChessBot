@@ -56,7 +56,33 @@ int main() {
         std::cout<<"STALEMATE!\n";
     }
     
+    std::ofstream outfile("GameInformation.txt");  // Open file for writing
+    if (!outfile) {  // Check if file opened successfully
+        std::cerr << "Error opening file for writing!" << std::endl;
+        return 1;
+    }
     
+    game.boardStates.push_back(game.getBoard()); //adds the checkmated board state
+    std::cout << game.masterMoveList.size() << "\n";
+    outfile << "MOVES MADE THIS GAME:" << std::endl;  // Write to the file
+    for (int i = 0 ;i < game.masterMoveList.size();i++){
+        /*
+            1. white_move , black_move
+            2. white_move , black_move
+        */
+        if (i %2 == 0){ //white moves
+            outfile << std::endl <<  (i/2 + 1)<< ". "<< game.masterMoveList.at(i).chessNotation;
+            if (i != game.masterMoveList.size() - 1) outfile << " , ";
+            
+        }
+        else{ //black moves
+        outfile << game.masterMoveList.at(i).chessNotation ;
+        }
+
+    }
+
+    outfile.close();  // Close the file
+
     std::cout <<"\nExiting the Program...\n";
     return 0;
 }

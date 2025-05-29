@@ -36,8 +36,15 @@ int main() {
      std::cout<<"\n<------HALF TURN ------>\n";
     game.getBoard().displayBoardPolished();
     game.takeGameHalfTurn(black);
+    bool blackCastle, whiteCastle;
+    blackCastle = game.getBoard().getCastlePrivelege(black);
+    whiteCastle = game.getBoard().getCastlePrivelege(white);
+    std::cout <<"Debug: WC->" << whiteCastle << " | BC->" << blackCastle << std::endl;
     //printBitBoard(game.getBoard().getPawns(black));
-    
+    if (game.getBoard().getKing(white) == 0ULL|| game.getBoard().getKing(black) == 0ULL ){
+        std::cout <<"\n\n\nNO KING DETECTED: THIS IS IMPOSSIBLE\n\n\n";
+        return -1;
+    }
     if (moveList.empty() && !game.isCheckMate(white,game.getBoard())) break; //no legal moves but not mate
     if (game.isCheckMate(white,game.getBoard())){                                                                                   //ISSUE RIGHT HERE!!!!
         game.winner = -1;

@@ -616,14 +616,18 @@ private:
     uint64_t enemyPieces;
     // 1= white, -1 = black
     Color sideToMove;
-    bool whiteCastlePrivelege;
-    bool whiteKingCastleRights;
-    bool whiteQueenCastleRights;
+    bool whiteCastlePrivelege; //tracks over all ability to castle
+    bool whiteKingCastleRights; //potential to castle king side
+    bool whiteQueenCastleRights; // potential ''
+    bool whiteCanKingCastle; //if can castle this turn
+    bool whiteCanQueenCastle; // ''
     bool whiteHasCastled;
     
     bool blackCastlePrivelege;
     bool blackKingCastleRights;
     bool blackQueenCastleRights;
+    bool blackCanKingCastle;
+    bool blackCanQueenCastle;
     bool blackHasCastled;
     
     
@@ -657,7 +661,12 @@ public:
             //    fullmove_number == other.fullmove_number;
     }
 
-    
+   bool getCastlePrivelege(Color side){
+        if (side == white){
+            return whiteCastlePrivelege;
+        }
+        return blackCastlePrivelege;
+    }
     //prevents leftside overflow
     const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
     const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
@@ -1266,10 +1275,12 @@ public:
     bool isSquareInCheck(Board boardOfInterest, Square squareOfInterest, Color colorOfSquare){
        
         Color opponentColor = !colorOfSquare;
-        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
+        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleKingMovesBitBoard(boardOfInterest,opponentColor);
+        //opponentMoves includes King because this asks if a square is in check, different than if king is in check
         //std::cout <<"\nCheckpoint D\n";
         return  ( (squareOfInterest & opponentMoves) != 0); //returns true on check
     }
+    
     bool canKingCastle(Board boardState, int color){ //check for if any of the 4 squares of relevance are in check... done later
         if (color == white && (boardState.getPieceAtSquare(e1) == king && !isSquareInCheck(boardState,e1,white)) 
                             && (boardState.getPieceAtSquare(h1) == rook && !isSquareInCheck(boardState,h1,white)) 
@@ -1304,24 +1315,52 @@ public:
        
        if (color == white){
             //handles if the move made moved needed pieces
-            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king ) && (!moveBeingMade.isKingCastle && !moveBeingMade.isQueenCastle)){
+            if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
+                postMoveBoardState.whiteHasCastled = true;
+                postMoveBoardState.whiteCanQueenCastle = false;
+                postMoveBoardState.whiteCanKingCastle = false;
+                postMoveBoardState.whiteCastlePrivelege = false;
+                postMoveBoardState.whiteKingCastleRights = false;
+                postMoveBoardState.whiteQueenCastleRights = false;
+                return;
+            }
+            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
                     if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling
                         if (moveBeingMade.fromSquare % 8 == 7) postMoveBoardState.whiteKingCastleRights = false;
                         if (moveBeingMade.fromSquare % 8 == 0) postMoveBoardState.whiteQueenCastleRights = false;
                     }
                     if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
+                        postMoveBoardState.whiteHasCastled = false;
+                        postMoveBoardState.whiteCanQueenCastle = false;
+                        postMoveBoardState.whiteCanKingCastle = false;
+                        postMoveBoardState.whiteCastlePrivelege = false;
                         postMoveBoardState.whiteKingCastleRights = false;
                         postMoveBoardState.whiteQueenCastleRights = false;
                     }
             }
             //handles the post move boardstate. Are pieces in location and has castling been maintained previously?
-            postMoveBoardState.whiteKingCastleRights = canKingCastle(postMoveBoardState,white);
-            postMoveBoardState.whiteQueenCastleRights = canQueenCastle(postMoveBoardState,white);
+            if (canKingCastle(postMoveBoardState,white)){
+                postMoveBoardState.whiteCanKingCastle = true;
+            }
+            if (canQueenCastle(postMoveBoardState,white)){
+                postMoveBoardState.whiteCanQueenCastle = true;
+            }
+
+            //postMoveBoardState.whiteQueenCastleRights = canQueenCastle(postMoveBoardState,white);
         }
         else{//black
+            if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
+                postMoveBoardState.blackHasCastled = true;
+                postMoveBoardState.blackCanQueenCastle = false;
+                postMoveBoardState.blackCanKingCastle = false;
+                postMoveBoardState.blackCastlePrivelege = false;
+                postMoveBoardState.blackKingCastleRights = false;
+                postMoveBoardState.blackQueenCastleRights = false;
+                return;
+            }
             //handles if the move made moved needed pieces
-            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king ) && (!moveBeingMade.isKingCastle && !moveBeingMade.isQueenCastle)){
+            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
                     if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling
                         if (moveBeingMade.fromSquare % 8 == 7) postMoveBoardState.blackKingCastleRights = false;
@@ -1329,14 +1368,21 @@ public:
 
                     }
                     if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
-                        blackKingCastleRights = false;
-                        blackQueenCastleRights = false;
+                        postMoveBoardState.blackHasCastled = false;
+                        postMoveBoardState.blackCanQueenCastle = false;
+                        postMoveBoardState.blackCanKingCastle = false;
+                        postMoveBoardState.blackCastlePrivelege = false;
+                        postMoveBoardState.blackKingCastleRights = false;
+                        postMoveBoardState.blackQueenCastleRights = false;
                     }
             }
             //handles the post move boardstate. Are pieces in location and has castling been maintained previously?
-            postMoveBoardState.blackKingCastleRights = canKingCastle(postMoveBoardState,black);
-            postMoveBoardState.blackQueenCastleRights = canQueenCastle(postMoveBoardState,black);
-
+            if (canKingCastle(postMoveBoardState,black)){
+                postMoveBoardState.blackCanKingCastle = true;
+            }
+            if (canQueenCastle(postMoveBoardState,black)){
+                postMoveBoardState.blackCanQueenCastle = true;
+            }
            
         }
          //if both king and queen rights are lost, then overall rights are lost
@@ -1627,12 +1673,12 @@ public:
                 
                 //castling
                 if (color == white) { //castling will never be generated from a bitboard. its outside the normal rules for king movement
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == h1 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == a1 ) legalMove.isQueenCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == g1 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == c1 ) legalMove.isQueenCastle = true;
                 }
                 else{
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == h8 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == a8 ) legalMove.isQueenCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == g8 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == c8 ) legalMove.isQueenCastle = true;
                 }
 
                 //promotions
@@ -1777,7 +1823,7 @@ public:
             movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
         if (boardstate.canQueenCastle(boardstate,color)){
-            movesToAdd.push_back(createMoveFromString(board, white, "O-O-O"));
+            movesToAdd.push_back(createMoveFromString(board, color, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         
@@ -1989,7 +2035,9 @@ public:
         move.isQueenCastle = (moveStr == "O-O-O");
 
         if (move.isKingCastle){
+             move.pieceType= king;
             if (playerColor == white){
+               
                 move.fromSquare = e1;
                 move.toSquare = g1;
                 return move;
@@ -2001,6 +2049,7 @@ public:
             }
         }
         else if (move.isQueenCastle){
+             move.pieceType= king;
             if (playerColor == white){
                 move.fromSquare = e1;
                 move.toSquare = c1;
@@ -2048,7 +2097,7 @@ public:
         }
 
         // std::cout << moveStr << std::endl;
-
+        
         if (move.isCheck || move.isCheckMate)
         {
             moveStr = moveStr.substr(0, moveStr.length() - 1);
@@ -2120,6 +2169,8 @@ public:
     std::string getMoveString(MoveInformation move)
     {
         std::stringstream ss;
+        if (move.isKingCastle) return "O-O";
+        if (move.isQueenCastle) return "O-O-O";
         if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
             
         if (move.isAmbiguous){
@@ -2173,8 +2224,8 @@ public:
         if (candidates.empty()) throw std::runtime_error("\nNo matching legal move found: possibly invalid move input.\n");
         if (candidates.size() > 1){
             
-            for (MoveInformation move : candidates) move.printMoveInfo();
-            std::cout << std::endl;
+            // for (MoveInformation move : candidates) move.printMoveInfo();
+            // std::cout << std::endl;
             throw std::runtime_error("\nAmbiguous move input: multiple matching legal moves found.\n");
         }
         return candidates.at(0);
@@ -2202,7 +2253,7 @@ public:
 
             try {
                 matchingMove = getMatchingMove(getBoard(),possibleLegalMoves, userInputtedMove);
-                matchingMove.printMoveInfo();
+                //matchingMove.printMoveInfo();
                 break; // exit the loop since we found a valid move
             }
             catch (const std::runtime_error& e) {
@@ -2213,7 +2264,7 @@ public:
         
         }
 
-        matchingMove.printMoveInfo();
+        //matchingMove.printMoveInfo();
         
         getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
@@ -2225,6 +2276,8 @@ public:
         else{
             getBoard().enPassantTargetSquare = -1;
         }
+        getBoard().updateCastlingRights(getBoard(),matchingMove,turn);
+
         Board newBoard = getBoard();
         boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
         masterMoveList.push_back(matchingMove); //adds the move to bridge between board states

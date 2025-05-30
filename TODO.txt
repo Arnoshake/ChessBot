@@ -3,8 +3,6 @@ TO DO:
     saving board states (need to create a board --> FEN) NOT NEEDED UNTIL AFTER FULLY WORKING GAME
 
     castling
-        -make it work for black
-        -fix/address scenario where castling squares in check
         -fix/address scenario where castling puts opponent in check
     checkmate
         -differentiate notation for check and mate

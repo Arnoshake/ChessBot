@@ -21,11 +21,11 @@ int main() {
    
                     
     while (1){
-        game.getBoard().removePiece(black,king,e8);
-        game.getBoard().addPiece(black,king,f5);
-        game.getBoard().removePiece(white,pawn,f2);
-        game.getBoard().removePiece(white,bishop,f1);
-        game.getBoard().removePiece(white,knight,g1);
+        // game.getBoard().removePiece(black,king,e8);
+        // game.getBoard().addPiece(black,king,f5);
+        // game.getBoard().removePiece(white,pawn,f2);
+        // game.getBoard().removePiece(white,bishop,f1);
+        // game.getBoard().removePiece(white,knight,g1);
 
         
         game.getGameTurnCount()++;

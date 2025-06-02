@@ -21,63 +21,46 @@ int main() {
    
                     
     while (1){
-        // game.getBoard().removePiece(black,king,e8);
-        // game.getBoard().addPiece(black,king,f5);
-        // game.getBoard().removePiece(white,pawn,f2);
-        // game.getBoard().removePiece(white,bishop,f1);
-        // game.getBoard().removePiece(white,knight,g1);
 
-        
+        //WHITE TURN
         game.getGameTurnCount()++;
         game.getBoard().updateFriendlyEnemy(white);
-        moveList = game.generateLegalMoves(game.getBoard(),white); //for checking if its end of game...
-    // game.identifyCheckMateMoves(moveList,game.getBoard( ) );
+        moveList = game.generateLegalMoves(game.getBoard(),white);
         game.getBoard().displayBoardPolished();
-        //game.getBoard().printCastlingStats(); 
         game.takeGameHalfTurn(white);
 
-        // REPLACE WITH FUNCTION
-        if (moveList.empty() && !game.isCheckMate(black,game.getBoard())) break; //no legal moves but not mate
-        if (game.isCheckMate(black,game.getBoard())){
-            game.winner = 1;
-            break;
-        }
-    
-        
-        // game.identifyCheckMateMoves(moveList,game.getBoard( ) );
-        //printBitBoard(game.getBoard().getPawnMask(d4,black));
+        game.checkGameCondition(game);
+        if (game.gameCondition != ongoing) break;
         std::cout<<"\n<------HALF TURN ------>\n";
+
+        //BLACK TURN
         game.getBoard().updateFriendlyEnemy(black);
         moveList = game.generateLegalMoves(game.getBoard(),black);
-
         game.getBoard().displayBoardPolished();
-        //game.getBoard().printCastlingStats();
         game.takeGameHalfTurn(black);
-   
-        if (game.getBoard().getKing(white) == 0ULL|| game.getBoard().getKing(black) == 0ULL ){
-            std::cout <<"\n\n\nNO KING DETECTED: THIS IS IMPOSSIBLE\n\n\n";
-            return -1;
-        }
-        if (moveList.empty() && !game.isCheckMate(white,game.getBoard())) break; //no legal moves but not mate
-        if (game.isCheckMate(white,game.getBoard())){                                                                                   //ISSUE RIGHT HERE!!!!
-            game.winner = -1;
-            break;
-        }
-        std::cout<<"\n<------<>------>\n";
-        }
 
+        game.checkGameCondition(game);
+        if (game.gameCondition != ongoing) break;
+         std::cout<<"\n<------<>------>\n";
+    }
+        
 
+    //only executes once gameCondition != ongoing
 
     std::cout << "\n\n";
-    if (game.winner == 1){
+    if (game.gameCondition == whiteWins){
         std::cout<<"WHITE WINS!\n";
     }
-    if (game.winner == -1){
+    else if (game.gameCondition == blackWins){
         std::cout<<"BLACK WINS!\n";
     }
-    if (game.winner == 0){
+    else if (game.gameCondition == stalemate){
         std::cout<<"STALEMATE!\n";
     }
+    else{
+        std::cout<<"THIS SHOULD NOT HAPPEN | GAME CONDITION ERROR!\n";
+    }
+    
     
     std::ofstream outfile("GameInformation.txt");  // Open file for writing
     if (!outfile) {  // Check if file opened successfully

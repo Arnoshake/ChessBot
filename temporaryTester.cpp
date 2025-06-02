@@ -31,7 +31,7 @@ int main() {
 
         game.checkGameCondition(game);
         if (game.gameCondition != ongoing) break;
-        std::cout<<"\n<------HALF TURN ------>\n";
+        std::cout<<"\n    <------HALF TURN ------>\n";
 
         //BLACK TURN
         game.getBoard().updateFriendlyEnemy(black);
@@ -60,7 +60,7 @@ int main() {
     else{
         std::cout<<"THIS SHOULD NOT HAPPEN | GAME CONDITION ERROR!\n";
     }
-    
+
     
     std::ofstream outfile("GameInformation.txt");  // Open file for writing
     if (!outfile) {  // Check if file opened successfully

@@ -1887,7 +1887,7 @@ public:
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
-        printMoveList(allLegalMoves);
+        //printMoveList(allLegalMoves);
         identifyCheckMateMoves(allLegalMoves,boardstate); //removes moves that put oneself in check
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
         for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
@@ -1918,7 +1918,7 @@ public:
 
         movesToAdd.clear();                                                             // is this necessary?
         if (board.canKingCastle(board,color)){
-            std::cout << "\n DEBUG : CASTLING IS ADDED\n";
+            //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
             movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
         if (board.canQueenCastle(board,color)){
@@ -2319,10 +2319,24 @@ public:
         while (true) {
             std::string userInput;
             std::cout << "\nPlease make your move! (standard chess notation): ";
-            std::cin >> userInput;
+            while (1){
+                std::cin >> userInput;
+                if (userInput == "quit" || userInput == "Quit" || userInput == "q" || userInput == "Q"){
+                std::cout << "\nQuitting program...\n";
+                std::exit(0);
+                }
+                else if (userInput.length() == 1){
+                    printMoveList(possibleLegalMoves);
+                std::cout << "\nPlease enter a valid move.\n";
+                }
+                else{
+                    break;
+                }
+            }   
+            // move is not too small
             MoveInformation userInputtedMove = createMoveFromString(getBoard(),turn,userInput);
             userInputtedMove.playerColor = turn;
-            userInputtedMove.printMoveInfo();
+            //userInputtedMove.printMoveInfo();
 
 
             try {
@@ -2400,7 +2414,7 @@ public:
                 //fifty move rule requires no pawn moves or no captures occur for 50 (100 half) moves
             }
         }
-        if (fiftyMoveRuleFlag == 1) std::cout <<"\nFIFTY MOVE RULE! STALEMATE!\n"
+        if (fiftyMoveRuleFlag == 1) std::cout <<"\nFIFTY MOVE RULE! STALEMATE!\n";
         return  ( (possibleMoves.empty() && !isCheckMate(colorTakingTurn,boardState)) || fiftyMoveRuleFlag == 1 );
         //if its not mate but player cant move | isCheckMate call takes care of ensuring consideration of check
     }

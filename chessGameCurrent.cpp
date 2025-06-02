@@ -1623,6 +1623,9 @@ void displayBoardPolished() {
 
 };
 
+enum gameEndingCondition{
+    whiteWins, blackWins,stalemate,ongoing
+};
 
 class Game
 {
@@ -1633,7 +1636,7 @@ private:
     int turnCount; //index for move/board history
     
 public:
-    int winner = 0; //1 == white winner, -1 == black winner, 0 means ongoing or stalemate
+    gameEndingCondition gameCondition;
 
     std::vector<MoveInformation> masterMoveList; //holds all moves made (game turn - 1 = index)
     std::vector<Board> boardStates; //holds all board states
@@ -1642,6 +1645,7 @@ public:
         board.initializeBoard();
         boardStates.push_back(board);
         playerTakingTurnColor = white;
+        gameCondition = ongoing;
         turnCount = 0;
     }
     //GETTER METHODS
@@ -2378,12 +2382,40 @@ public:
     return (legalMoves.empty());
 }
 
-    bool isStaleMate(Board boardState){     //NEED TO ADD 50 HALFMOVE GAME RULE
-        std::vector<MoveInformation> whiteMoves = generateLegalMoves(boardState, white);
-        std::vector<MoveInformation> blackMoves = generateLegalMoves(boardState,black);
-        return ( (whiteMoves.empty() && !isCheckMate(white,boardState)) || (blackMoves.empty() && !isCheckMate(black,boardState)) );
-        //if its not mate but player cant move
+    bool isStaleMate(Board boardState, Color colorTakingTurn){     //NEED TO ADD 50 HALFMOVE GAME RULE
+        std::vector<MoveInformation> possibleMoves; 
+        if (colorTakingTurn == white){
+            possibleMoves = generateLegalMoves(boardState, white);
+        }
+        else{
+            possibleMoves = generateLegalMoves(boardState,black);
+        }
+        int fiftyMoveRuleFlag = 1;
+        size_t sizeOfNewMoveList = std::min(size_t(100),masterMoveList.size());
+        std::vector<MoveInformation> pastFiftyMoves (masterMoveList.end() - sizeOfNewMoveList, masterMoveList.end()); //creates a subvector of the moves made so far in the game, size is either 100 half moves or how many moves have been made in the game
+        if (pastFiftyMoves.size() < 100) fiftyMoveRuleFlag = 0;
+        else{ //size == 100
+            for (int i = 0; i < pastFiftyMoves.size(); i++){
+                if (pastFiftyMoves.at(i).pieceType == pawn || pastFiftyMoves.at(i).isCapture == true) fiftyMoveRuleFlag = 0;
+                //fifty move rule requires no pawn moves or no captures occur for 50 (100 half) moves
+            }
+        }
+        if (fiftyMoveRuleFlag == 1) std::cout <<"\nFIFTY MOVE RULE! STALEMATE!\n"
+        return  ( (possibleMoves.empty() && !isCheckMate(colorTakingTurn,boardState)) || fiftyMoveRuleFlag == 1 );
+        //if its not mate but player cant move | isCheckMate call takes care of ensuring consideration of check
     }
 
+    void checkGameCondition(Game &gameOfInterest){ // will check for the play taking turn
+        Color colorTakingTurn = gameOfInterest.getColorOfPlayerTakingTurn();
+        Board currentBoard = gameOfInterest.getBoard();
+
+        if (isCheckMate(colorTakingTurn,currentBoard) ){
+            if (colorTakingTurn == white) gameOfInterest.gameCondition = blackWins; //it is checkmate for white so black wins
+            else gameOfInterest.gameCondition = whiteWins; //it is checkmate for black so white wins
+            return;
+            
+        }
+        else if (isStaleMate(currentBoard,colorTakingTurn)) gameOfInterest.gameCondition = stalemate; //color does not matter for stalemate
+    }
 
 };

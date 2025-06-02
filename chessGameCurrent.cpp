@@ -2303,7 +2303,29 @@ public:
         }
         return candidates.at(0);
     }
-   void takeGameHalfTurn(Color turn){                                                        
+    void makeManualGameHalfTurn (Color turn, MoveInformation moveBeingMade){
+        MoveInformation matchingMove = getMatchingMove(getBoard(), generateLegalMoves(getBoard(), turn) , moveBeingMade);
+        getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        
+        if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
+        getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;
+        //std::cout << "Setting enPassantTargetSquare to: " << matchingMove.toSquare  << " + "<<matchingMove.fromSquare<< " -->" <<getBoard().enPassantTargetSquare << "\n";
+
+    }
+        else{
+            getBoard().enPassantTargetSquare = -1;
+        }
+        getBoard().updateCastlingRights(getBoard(),matchingMove,turn);
+
+        Board newBoard = getBoard();
+        boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
+        masterMoveList.push_back(matchingMove); //adds the move to bridge between board states
+        getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
+        // printBitBoard(getBoard().getPawns(white));
+        // printBitBoard(getBoard().getPawns(black));
+        getBoard().displayBoardPolished();
+    }
+    void takeGameHalfTurn(Color turn){                                                        
        
         
         //printBitBoard(getBoard().getPawns(black));

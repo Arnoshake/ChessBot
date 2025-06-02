@@ -9,6 +9,5 @@ TO DO:
         -review what triggers a game's end and update 
     ambiguous
         -make consistent notation (rank or file or both)
-    stalemate 
-        -implement
+ 
     

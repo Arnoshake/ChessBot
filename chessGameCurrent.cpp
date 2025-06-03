@@ -1880,6 +1880,7 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
         //printMoveList(allLegalMoves);
+        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
         identifyCheckMateMoves(allLegalMoves,boardstate); //removes moves that put oneself in check
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
         for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
@@ -1918,9 +1919,9 @@ public:
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        identifyCheckMateMoves(allLegalMoves,board); //ammends check or mate to moves
-        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+        //pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
+        //identifyCheckMateMoves(allLegalMoves,board); //ammends check or mate to moves
+        //findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
 
         return allLegalMoves;
 
@@ -2429,15 +2430,18 @@ public:
         // std::cout <<"\nCheckpoint A\n";
         //std::cout << "\nDebug: checkpoint 2\n";
         std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);
-        //printMoveList(legalMoves);
-        //std::cout <<"\n";
+        // boardState.displayBoardPolished();
+    
+        // std::cout <<"\nLegal Moves:";
+        // printMoveList(legalMoves);
+        // std::cout <<"\n";
        //  std::cout <<"\nCheckpoint B\n";
        //std::cout << "\nDebug: checkpoint 3: " << legalMoves.empty() << std::endl;
-       printMoveList(legalMoves);
+       //printMoveList(legalMoves);
     return (legalMoves.empty());
 }
 
-    bool isStaleMate(Board boardState, Color colorTakingTurn){     //NEED TO ADD 50 HALFMOVE GAME RULE
+    bool isStaleMate(Board boardState, Color colorTakingTurn){     
         std::vector<MoveInformation> possibleMoves; 
         if (colorTakingTurn == white){
             possibleMoves = generateLegalMoves(boardState, white);

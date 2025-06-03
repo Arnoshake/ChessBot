@@ -80,6 +80,12 @@ int main() {
     game.makeManualGameHalfTurn(black,"a6");    
     game.makeManualGameHalfTurn(white,"Bc4");
     game.makeManualGameHalfTurn(black,"a5");  
+    game.makeManualGameHalfTurn(white,"Nh3");
+    game.makeManualGameHalfTurn(black,"a4");  
+    game.makeManualGameHalfTurn(white,"Ng5");
+    game.makeManualGameHalfTurn(black,"a3");  
+    game.makeManualGameHalfTurn(white,"Qh3");
+    game.makeManualGameHalfTurn(black,"b6");  
 
     while (1){
 

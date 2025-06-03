@@ -924,8 +924,8 @@ public:
             possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
         }
         else{ //identical logic, different variable values and shifting operator
-            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & enemyPieces;
+            possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & enemyPieces;
         }
         return possibleCaptures;
     }
@@ -1002,8 +1002,8 @@ public:
             if (rank == 6 && singlePush) doublePush = (singlePush >> 8) & emptySquares;
             possibleMoves = singlePush | doublePush ;
                                                                                             //DONT FORGET TO REMOVE
-            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
-            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
+            possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
+            possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
             possibleMoves |= possibleCaptures;
         }
         
@@ -1792,21 +1792,13 @@ public:
 
         for (int i = 0; i < pseudoLegalMoves.size();i++){
             Board copyBoard = boardstate;
+            Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
             copyBoard.makeMove(copyBoard,pseudoLegalMoves.at(i),0);
-            if (isKingInCheck( copyBoard , !pseudoLegalMoves.at(i).playerColor ) ){
-                
-                //if the move leads to the opponent being in check
-                pseudoLegalMoves.at(i).isCheck = true;
-                std::vector<MoveInformation> legalMovesForCheckMate = generateLegalMovesOnBoard(copyBoard,!pseudoLegalMoves.at(i).playerColor);
-                Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
-                if (generateLegalMovesOnBoard(copyBoard, opponentColor).empty()) pseudoLegalMoves.at(i).isCheckMate = true;
-                else{
-                    // std::cout <<"\nThese moves are preventing a checkmate:";
-                    // printMoveList(generateLegalMovesOnBoard(copyBoard, opponentColor));
-                    // std::cout <<"\n";
-                }
-        
+            if (isCheckMate(opponentColor,copyBoard)){
+                //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
+                pseudoLegalMoves.at(i).isCheckMate = true;
             }
+            else if (isKingInCheck( copyBoard , opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
         }
     }
         
@@ -1895,7 +1887,7 @@ public:
         }
         return allLegalMoves;
     }
-    std::vector<MoveInformation> generateLegalMovesOnBoard(Board& board, Color color){
+    std::vector<MoveInformation> generateLegalMovesOnBoard(Board board, Color color){
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
         movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
@@ -1926,10 +1918,29 @@ public:
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
+        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
+        identifyCheckMateMoves(allLegalMoves,board); //ammends check or mate to moves
+        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+
         return allLegalMoves;
 
     }
 
+    void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
+        int index = 0;
+        for (MoveInformation move: legalMovesList){
+            Board copy = board;
+            copy.makeMove(copy,move,0);
+            if (isKingInCheck(copy,move.playerColor)){
+                legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
+                continue;
+            }
+            else{
+            index++;
+            }
+        }
+
+    }
     
     void printMoveList(std::vector<MoveInformation> moveList){
     for (int i = 0; i < moveList.size();i++){
@@ -2083,7 +2094,7 @@ public:
         //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
         return move;
     }
-    MoveInformation createMoveFromString(Board boardWaitingForMove, Color playerColor, std::string chessNotation){
+    MoveInformation createMoveFromString(Board boardWaitingForMove, Color playerColor, std::string chessNotation){ //turn string into a move with rel attributes
         //assuming a possible chess notation (ex: NOT 1 character length)
         std::string moveStr = chessNotation; // will be editing this
         MoveInformation move;
@@ -2239,12 +2250,14 @@ public:
 
 
     }
-    std::string getMoveString(MoveInformation move)
+    std::string getMoveString(MoveInformation move) //creates a string from existing move characteristics
     {
         std::stringstream ss;
-        if (move.isKingCastle) return "O-O";
-        if (move.isQueenCastle) return "O-O-O";
-        if (!(move.getPieceLetter(move.pieceType) == 'P') ) ss << move.getPieceLetter(move.pieceType);
+        if (move.isKingCastle) ss << "O-O";
+        if (move.isQueenCastle) ss << "O-O-O";
+        if (!(move.getPieceLetter(move.pieceType) == 'P') ){
+            if ( !move.isKingCastle && !move.isQueenCastle) ss << move.getPieceLetter(move.pieceType);
+        }
             
         if (move.isAmbiguous){
             if (!move.uniqueFile && move.uniqueRank) {
@@ -2273,7 +2286,7 @@ public:
     } 
     
     //MAKING MOVE
-    MoveInformation getMatchingMove(Board boardState,const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){
+    MoveInformation getMatchingMove(Board boardState,const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){ //compares user move to list of legal and combines
         printMoveList(moveList);
         std::vector<MoveInformation> candidates;
         for (MoveInformation move : moveList){
@@ -2303,7 +2316,10 @@ public:
         }
         return candidates.at(0);
     }
-    void makeManualGameHalfTurn (Color turn, MoveInformation moveBeingMade){
+    void makeManualGameHalfTurn (Color turn, std::string chessNotation){ // identical to takeGameHalfTurn but move is predetermined
+        MoveInformation moveBeingMade;
+        moveBeingMade = createMoveFromString(getBoard(),turn,chessNotation);
+        
         MoveInformation matchingMove = getMatchingMove(getBoard(), generateLegalMoves(getBoard(), turn) , moveBeingMade);
         getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
@@ -2374,7 +2390,7 @@ public:
         
         }
 
-        //matchingMove.printMoveInfo();
+        matchingMove.printMoveInfo();
         
         getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
@@ -2408,13 +2424,16 @@ public:
         return  ( (kingLocation & opponentMoves) != 0); //returns true on check
     }
     bool isCheckMate(Color colorOfKing, Board boardState){
-        
+        //std::cout << "\nDebug: checking for checkmate!\n";
         if (!isKingInCheck(boardState,colorOfKing)) return false; //if the king isnt in check, it cant be mate
         // std::cout <<"\nCheckpoint A\n";
+        //std::cout << "\nDebug: checkpoint 2\n";
         std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);
         //printMoveList(legalMoves);
-        std::cout <<"\n";
+        //std::cout <<"\n";
        //  std::cout <<"\nCheckpoint B\n";
+       //std::cout << "\nDebug: checkpoint 3: " << legalMoves.empty() << std::endl;
+       printMoveList(legalMoves);
     return (legalMoves.empty());
 }
 

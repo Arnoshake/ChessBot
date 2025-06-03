@@ -4,9 +4,6 @@ TO DO:
 
     castling
         -fix/address scenario where castling puts opponent in check
-    checkmate
-        -differentiate notation for check and mate
-        -review what triggers a game's end and update 
     ambiguous
         -make consistent notation (rank or file or both)
  

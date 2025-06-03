@@ -18,32 +18,77 @@ int main() {
     //game.getBoard().addPiece(black,pawn,d4);
     std::vector<MoveInformation> moveList;
     //STALEMATE TESTER
-    int whiteMoveCounter = 0;
-    int blackMoveCounter = 0;
-   while (1){
+    // int whiteMoveCounter = 0;
+    // int blackMoveCounter = 0;
+//    while (1){
+
+//         //WHITE TURN
+//         game.getGameTurnCount()++;
+//         std::cout << "\nMOVE " << game.getGameTurnCount() << "\n";
+//         whiteMoveCounter++;
+//         game.getBoard().updateFriendlyEnemy(white);
+//         moveList = game.generateLegalMoves(game.getBoard(),white);
+//         game.getBoard().displayBoardPolished();
+//         if (whiteMoveCounter == 1){
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),white, "e4");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(white, move);
+//         }
+//         else if (whiteMoveCounter % 2 == 0){
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),white, "Ke2");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(white, move);
+//         }
+//         else {
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),white, "Ke1");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(white, move);
+//         }
+
+//         game.checkGameCondition(game);
+//         if (game.gameCondition != ongoing) break;
+//         std::cout<<"\n    <------HALF TURN ------>\n";
+
+//         //BLACK TURN
+//         game.getBoard().updateFriendlyEnemy(black);
+//         moveList = game.generateLegalMoves(game.getBoard(),black);
+//         game.getBoard().displayBoardPolished();
+//         blackMoveCounter++;
+//         if (blackMoveCounter == 1){
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),black, "e5");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(black, move);
+//         }
+//         else if (blackMoveCounter % 2 == 0){
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),black, "Ke7");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(black, move);
+//         }
+//         else {
+//             MoveInformation move = game.createMoveFromString(game.getBoard(),black, "Ke8");
+//             move.printMoveInfo();
+//             game.makeManualGameHalfTurn(black, move);
+//         }
+//         game.checkGameCondition(game);
+//         if (game.gameCondition != ongoing) break;
+//          std::cout<<"\n<------<>------>\n";
+//     }
+
+    game.makeManualGameHalfTurn(white,"e4");
+    game.makeManualGameHalfTurn(black,"e5");  
+    game.makeManualGameHalfTurn(white,"Qf3");
+    game.makeManualGameHalfTurn(black,"a6");    
+    game.makeManualGameHalfTurn(white,"Bc4");
+    game.makeManualGameHalfTurn(black,"a5");  
+
+    while (1){
 
         //WHITE TURN
         game.getGameTurnCount()++;
-        std::cout << "\nMOVE " << game.getGameTurnCount() << "\n";
-        whiteMoveCounter++;
         game.getBoard().updateFriendlyEnemy(white);
         moveList = game.generateLegalMoves(game.getBoard(),white);
         game.getBoard().displayBoardPolished();
-        if (whiteMoveCounter == 1){
-            MoveInformation move = game.createMoveFromString(game.getBoard(),white, "e4");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(white, move);
-        }
-        else if (whiteMoveCounter % 2 == 0){
-            MoveInformation move = game.createMoveFromString(game.getBoard(),white, "Ke2");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(white, move);
-        }
-        else {
-            MoveInformation move = game.createMoveFromString(game.getBoard(),white, "Ke1");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(white, move);
-        }
+        game.takeGameHalfTurn(white);
 
         game.checkGameCondition(game);
         if (game.gameCondition != ongoing) break;
@@ -53,50 +98,12 @@ int main() {
         game.getBoard().updateFriendlyEnemy(black);
         moveList = game.generateLegalMoves(game.getBoard(),black);
         game.getBoard().displayBoardPolished();
-        blackMoveCounter++;
-        if (blackMoveCounter == 1){
-            MoveInformation move = game.createMoveFromString(game.getBoard(),black, "e5");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(black, move);
-        }
-        else if (blackMoveCounter % 2 == 0){
-            MoveInformation move = game.createMoveFromString(game.getBoard(),black, "Ke7");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(black, move);
-        }
-        else {
-            MoveInformation move = game.createMoveFromString(game.getBoard(),black, "Ke8");
-            move.printMoveInfo();
-            game.makeManualGameHalfTurn(black, move);
-        }
+        game.takeGameHalfTurn(black);
+
         game.checkGameCondition(game);
         if (game.gameCondition != ongoing) break;
          std::cout<<"\n<------<>------>\n";
     }
-                    
-    // while (1){
-
-    //     //WHITE TURN
-    //     game.getGameTurnCount()++;
-    //     game.getBoard().updateFriendlyEnemy(white);
-    //     moveList = game.generateLegalMoves(game.getBoard(),white);
-    //     game.getBoard().displayBoardPolished();
-    //     game.takeGameHalfTurn(white);
-
-    //     game.checkGameCondition(game);
-    //     if (game.gameCondition != ongoing) break;
-    //     std::cout<<"\n    <------HALF TURN ------>\n";
-
-    //     //BLACK TURN
-    //     game.getBoard().updateFriendlyEnemy(black);
-    //     moveList = game.generateLegalMoves(game.getBoard(),black);
-    //     game.getBoard().displayBoardPolished();
-    //     game.takeGameHalfTurn(black);
-
-    //     game.checkGameCondition(game);
-    //     if (game.gameCondition != ongoing) break;
-    //      std::cout<<"\n<------<>------>\n";
-    // }
         
 
     //only executes once gameCondition != ongoing

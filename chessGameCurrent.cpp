@@ -442,7 +442,8 @@ enum Square {
     a5 = 32, b5,  c5,  d5,  e5,  f5,  g5,  h5,
     a6 = 40, b6,  c6,  d6,  e6,  f6,  g6,  h6,
     a7 = 48, b7,  c7,  d7,  e7,  f7,  g7,  h7,
-    a8 = 56, b8,  c8,  d8,  e8,  f8,  g8,  h8
+    a8 = 56, b8,  c8,  d8,  e8,  f8,  g8,  h8,
+    NO_SQUARE = -1
 };
 enum Color {
     black = -1, white = 1
@@ -615,7 +616,6 @@ private:
     uint64_t friendlyPieces;
     uint64_t enemyPieces;
     // 1= white, -1 = black
-    Color sideToMove;
     bool whiteCastlePrivelege; //tracks over all ability to castle
     bool whiteKingCastleRights; //potential to castle king side
     bool whiteQueenCastleRights; // potential ''
@@ -630,6 +630,8 @@ private:
     bool blackCanQueenCastle;
     bool blackHasCastled;
     
+    Square whiteKingPosition;
+    Square blackKingPosition;
     
 public:
     bool operator==(const Board& other) const {
@@ -647,7 +649,6 @@ public:
             whiteKings == other.whiteKings &&
             blackKings == other.blackKings &&
             emptySquares == other.emptySquares &&
-            sideToMove == other.sideToMove &&
             enPassantTargetSquare == other.enPassantTargetSquare &&
                 whiteCastlePrivelege == other.whiteCastlePrivelege &&
                 blackCastlePrivelege == other.blackCastlePrivelege &&
@@ -678,13 +679,7 @@ public:
 
         std::cout << "==========================" << std::endl;
     }
-   bool getCastlePrivelege(Color side){
-        if (side == white){
-            return whiteCastlePrivelege;
-        }
-        return blackCastlePrivelege;
-    }
-    //prevents leftside overflow
+   //prevents leftside overflow
     const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
     const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
     //prevents rightside overflow
@@ -717,7 +712,6 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        sideToMove = white;        //board creation defaults to white
         
         enPassantTargetSquare = -1;
 
@@ -763,10 +757,12 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        sideToMove = white;
         friendlyPieces = whitePieces;
         enemyPieces = blackPieces;
         enPassantTargetSquare = -1;
+
+        whiteKingPosition = e1;
+        blackKingPosition = e8;
     
     };
     void clearBoard(){
@@ -792,10 +788,12 @@ public:
         blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
         occupiedSquares = whitePieces | blackPieces;
         emptySquares = ~occupiedSquares;
-        sideToMove = white;
         friendlyPieces = whitePieces;
         enemyPieces = blackPieces;
         enPassantTargetSquare = -1;
+
+        whiteKingPosition,blackKingPosition = NO_SQUARE;
+        
     }
     //POSSIBLE CAPTURES/MOVES
     uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){     // pawn moves cant capture...
@@ -1065,6 +1063,7 @@ public:
    //rook, bishop, queen are all covered by the provided get_bishop_attack and get_rook_attack functions 
     //MAKING MOVES...should piece be integer or Piece type
     
+    //MANIPULATING BOARD
     void addPiece(Color color, int piece, int square){
             switch(piece){
                 case pawn:
@@ -1127,7 +1126,6 @@ public:
         pop_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
-    
     void makeMove(Board &board, MoveInformation move, int filterTest){  
         //if (filterTest) std::cout << "[DEBUG] Removing " << move.getPieceLetter(move.capturedPiece) << " from " << move.toSquare << std::endl;
         //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
@@ -1230,6 +1228,68 @@ public:
         
     } 
     
+    void setPieceAtSquare(Square targetSquare, Piece pieceType, Color colorOfPieceBeingMoved){
+        uint64_t mask = 1ULL << targetSquare;
+        switch(pieceType){
+            case pawn:
+                getPawns(colorOfPieceBeingMoved) |= mask;
+                break;
+            case bishop:
+                getBishops(colorOfPieceBeingMoved) |= mask;
+                break;
+            case knight:
+                getKnights(colorOfPieceBeingMoved) |= mask;
+                break;
+            case rook:
+                getRooks(colorOfPieceBeingMoved) |= mask;
+                break;
+            case queen:
+                getQueens(colorOfPieceBeingMoved) |= mask;
+                break;
+            case king:
+                getKing(colorOfPieceBeingMoved) |= mask;
+                if (colorOfPieceBeingMoved == white) whiteKingPosition = targetSquare;
+                else blackKingPosition = targetSquare;
+                break;
+            default:
+                std::cerr << "Error: Cannot set piece 'none' at square " << targetSquare << "\n";
+                break;
+        }
+        occupiedSquares |= mask;
+        getPieces(colorOfPieceBeingMoved) |= mask;
+    }
+    void clearSquare(Square targetSquare){
+        Board &currentBoardState = *this; //currentBoardState acts as an alias to this. Done for readability/simplicitiy
+        uint64_t mask = ~(1ULL << targetSquare);
+        
+        whitePawns   &= mask;
+        whiteKnights &= mask;
+        whiteBishops &= mask;
+        whiteRooks   &= mask;
+        whiteQueens  &= mask;
+        whiteKings   &= mask;
+
+        blackPawns   &= mask;
+        blackKnights &= mask;
+        blackBishops &= mask;
+        blackRooks   &= mask;
+        blackQueens  &= mask;
+        blackKings   &= mask;
+
+        if (targetSquare == whiteKingPosition) whiteKingPosition = NO_SQUARE; 
+        if (targetSquare == blackKingPosition) blackKingPosition = NO_SQUARE;
+    }
+    void movePiece(Square from, Square to){ //must be called on a square that HAS a piece... will fail otherwise
+        Board &currentBoardState = *this; //currentBoardState acts as an alias to this. Done for readability/simplicitiy
+
+        Piece pieceBeingMoved = currentBoardState.getPieceAtSquare(from);
+        Color colorOfPieceBeingMoved = currentBoardState.getColorAtSquare(from);
+        currentBoardState.removePiece(colorOfPieceBeingMoved , pieceBeingMoved , from);
+        currentBoardState.addPiece(colorOfPieceBeingMoved , pieceBeingMoved , to);
+    }
+
+
+
     bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare){
        
         Color opponentColor = !colorOfSquare;
@@ -1239,7 +1299,6 @@ public:
         //std::cout <<"\nCheckpoint D\n";
         return  ( ((1ULL << squareOfInterest) & opponentMoves) != 0); 
     }
-
     bool isKingInCheck(Color colorOfKing){
         
         uint64_t kingLocation = getKing(colorOfKing);
@@ -1249,7 +1308,13 @@ public:
        
         return  ( (kingLocation & opponentMoves) != 0); //if there is overlap (>0) return true
     }
-    
+    // CASTLING
+    bool getCastlePrivelege(Color side){
+        if (side == white){
+            return whiteCastlePrivelege;
+        }
+        return blackCastlePrivelege;
+    }
     bool canKingCastle(Color color){ //check for if any of the 4 squares of relevance are in check... done later
         
         if (color == white){
@@ -1284,9 +1349,8 @@ public:
                              && (getPieceAtSquare(c8) == none && !isSquareInCheck(c8,black)) 
                              && blackCastlePrivelege) return true;
         return false;
-    }
-    
-    void updateCastlingRights(MoveInformation moveBeingMade, Color color){ // call this function on the gameboard AFTER the move has been made
+    } 
+    void updateCastlingRights(MoveInformation moveThatWasMade, Color color){ // call this function on the gameboard AFTER the move has been made
         /*
             Castling can happen if none of the rel pieces are in check and king or rook  has not moved and you havent already castled 
 
@@ -1295,7 +1359,7 @@ public:
        
        if (color == white){
             //handles if the move made moved needed pieces
-            if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
+            if (moveThatWasMade.isKingCastle || moveThatWasMade.isQueenCastle){
                 whiteHasCastled = true;
                 whiteCanQueenCastle = false;
                 whiteCanKingCastle = false;
@@ -1304,13 +1368,13 @@ public:
                 whiteQueenCastleRights = false;
                 return;
             }
-            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
+            if ((moveThatWasMade.pieceType == rook || moveThatWasMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
-                    if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling                //ADD CONDITION THAT It ORIGINATES (pawn promotion can fuck this)
-                        if (moveBeingMade.fromSquare % 8 == 7) whiteKingCastleRights = false;
-                        if (moveBeingMade.fromSquare % 8 == 0) whiteQueenCastleRights = false;
+                    if (moveThatWasMade.pieceType == rook ){ //whichever rook moved voids that side's castling                //ADD CONDITION THAT It ORIGINATES (pawn promotion can fuck this)
+                        if (moveThatWasMade.fromSquare % 8 == 7) whiteKingCastleRights = false;
+                        if (moveThatWasMade.fromSquare % 8 == 0) whiteQueenCastleRights = false;
                     }
-                    if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
+                    if (moveThatWasMade.pieceType == king){ //any king movement voids castling on the new board state
                         whiteHasCastled = false;
                         whiteCanQueenCastle = false;
                         whiteCanKingCastle = false;
@@ -1330,7 +1394,7 @@ public:
             //postMoveBoardState.whiteQueenCastleRights = canQueenCastle(postMoveBoardState,white);
         }
         else{//black
-            if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
+            if (moveThatWasMade.isKingCastle || moveThatWasMade.isQueenCastle){
                 blackHasCastled = true;
                 blackCanQueenCastle = false;
                 blackCanKingCastle = false;
@@ -1340,14 +1404,14 @@ public:
                 return;
             }
             //handles if the move made moved needed pieces
-            if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
+            if ((moveThatWasMade.pieceType == rook || moveThatWasMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
-                    if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling
-                        if (moveBeingMade.fromSquare % 8 == 7) blackKingCastleRights = false;
-                        if (moveBeingMade.fromSquare % 8 == 0) blackQueenCastleRights = false;
+                    if (moveThatWasMade.pieceType == rook ){ //whichever rook moved voids that side's castling
+                        if (moveThatWasMade.fromSquare % 8 == 7) blackKingCastleRights = false;
+                        if (moveThatWasMade.fromSquare % 8 == 0) blackQueenCastleRights = false;
 
                     }
-                    if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
+                    if (moveThatWasMade.pieceType == king){ //any king movement voids castling on the new board state
                         blackHasCastled = false;
                         blackCanQueenCastle = false;
                         blackCanKingCastle = false;
@@ -1391,10 +1455,6 @@ public:
         return none;
     }
     //1 billion helper and bool methods
-    Color getSideForTurn(){
-        if (sideToMove == white) return white;
-        return black;
-    }
     bool isWhitePiece(int square)
     {
         return ((whitePieces) & (1ULL << square)) != 0;
@@ -1613,7 +1673,7 @@ public:
                 // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
 
             }
-            else if (isKingInCheck( copyBoard , opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
+            else if (boardstate.isKingInCheck(opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
         }
     }
     void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
@@ -1666,7 +1726,7 @@ public:
         for (MoveInformation move: legalMovesList){
             Board copy = board;
             copy.makeMove(copy,move,0);
-            if (isKingInCheck(copy,move.playerColor)){
+            if (copy.isKingInCheck(move.playerColor)){
                 legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
                 continue;
             }
@@ -1781,7 +1841,7 @@ public:
                 */
                Board copyBoard = getBoard();
                 copyBoard.makeMove(copyBoard,legalMove,0);
-               if ( !(isKingInCheck(copyBoard,legalMove.playerColor))){ //if the move doesnt put your own king in check
+               if ( !(copyBoard.isKingInCheck(legalMove.playerColor))){ //if the move doesnt put your own king in check
                     //add move to list
                     legalMove.chessNotation = getMoveString(legalMove);
                     if (legalMove.isPromotion){                               
@@ -1833,11 +1893,11 @@ public:
 
         movesToAdd.clear();                                                             // is this necessary?
         
-        if (boardstate.canKingCastle(boardstate,color)){
+        if (boardstate.canKingCastle(color)){
             // std::cout << "\n DEBUG : CASTLING IS ADDED\n";
             movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
-        if (boardstate.canQueenCastle(boardstate,color)){
+        if (boardstate.canQueenCastle(color)){
             movesToAdd.push_back(createMoveFromString(board, color, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
@@ -1872,11 +1932,11 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
         movesToAdd.clear();                                                             // is this necessary?
-        if (boardstate.canKingCastle(boardstate,color)){
+        if (boardstate.canKingCastle(color)){
             //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
             movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
-        if (boardstate.canQueenCastle(boardstate,color)){
+        if (boardstate.canQueenCastle(color)){
             movesToAdd.push_back(createMoveFromString(board,color, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
@@ -2280,7 +2340,7 @@ public:
         else{
             getBoard().enPassantTargetSquare = -1;
         }
-        getBoard().updateCastlingRights(getBoard(),matchingMove,turn);
+        getBoard().updateCastlingRights(matchingMove,turn);
 
         Board newBoard = getBoard();
         boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
@@ -2354,7 +2414,7 @@ public:
         else{
             getBoard().enPassantTargetSquare = -1;
         }
-        getBoard().updateCastlingRights(getBoard(),matchingMove,turn);
+        getBoard().updateCastlingRights(matchingMove,turn);
 
         Board newBoard = getBoard();
         boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
@@ -2379,7 +2439,7 @@ public:
             // std::cout << "[DEBUG] King is " << (isKingInCheck(boardState,colorOfKing) ? "" : "not ") << "in check.\n";
 
         //std::cout << "\nDebug: checking for checkmate!\n";
-        if (!isKingInCheck(boardState,colorOfKing)) return false; //if the king isnt in check, it cant be mate
+        if (!boardState.isKingInCheck(colorOfKing)) return false; //if the king isnt in check, it cant be mate
         // std::cout <<"\nCheckpoint A\n";
         //std::cout << "\nDebug: checkpoint 2\n";
         std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);

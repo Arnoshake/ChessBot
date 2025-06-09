@@ -9,14 +9,16 @@
 #include <vector>
 
 int main() {
+    
     init_sliders_attacks(0);
     init_sliders_attacks(1);
     Game game;
     //updates castling rights at game start
-    game.getBoard().updateCastlingRights(game.getBoard(),MoveInformation(),white);
-    game.getBoard().updateCastlingRights(game.getBoard(),MoveInformation(),black);
+    // game.getBoard().updateCastlingRights(MoveInformation(),white);
+    // game.getBoard().updateCastlingRights(MoveInformation(),black);
     //game.getBoard().addPiece(black,pawn,d4);
     std::vector<MoveInformation> moveList;
+   
     //STALEMATE TESTER
     // int whiteMoveCounter = 0;
     // int blackMoveCounter = 0;
@@ -74,26 +76,25 @@ int main() {
 //          std::cout<<"\n<------<>------>\n";
 //     }
 
-    game.makeManualGameHalfTurn(white,"e4");
-    game.makeManualGameHalfTurn(black,"e5");  
-    game.makeManualGameHalfTurn(white,"Qh5");
-    game.makeManualGameHalfTurn(black,"Nc6");    
-    game.makeManualGameHalfTurn(white,"Bc4");
-    game.makeManualGameHalfTurn(black,"Nf6");  
+    // game.makeManualGameHalfTurn(white,"e4");
+    // game.makeManualGameHalfTurn(black,"e5");  
+    // game.makeManualGameHalfTurn(white,"Qh5");
+    // game.makeManualGameHalfTurn(black,"Nc6");    
+    // game.makeManualGameHalfTurn(white,"Bc4");
+    // game.makeManualGameHalfTurn(black,"Nf6");  
     //game.makeManualGameHalfTurn(white,"Qxf7"); // checkmate?
  
-
+   
     while (1){
 
         //WHITE TURN
         game.getGameTurnCount()++;
+        Board current = game.getBoard();
         game.getBoard().updateFriendlyEnemy(white);
         moveList = game.generateLegalMoves(game.getBoard(),white);
         game.identifyCheckMateMoves(moveList,game.getBoard());
         game.updateNotationForMoveList(moveList);
-        moveList.at(33).printMoveInfo();
-        game.createMoveFromString(game.getBoard(),white,"Qxe5+").printMoveInfo();
-        
+        game.getBoard().printCastlingStats();
         game.getBoard().displayBoardPolished();
         game.takeGameHalfTurn(white);
 
@@ -106,6 +107,7 @@ int main() {
         moveList = game.generateLegalMoves(game.getBoard(),black);
         game.identifyCheckMateMoves(moveList,game.getBoard());
         game.updateNotationForMoveList(moveList);
+        game.getBoard().printCastlingStats();
         game.getBoard().displayBoardPolished();
         game.takeGameHalfTurn(black);
 

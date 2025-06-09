@@ -490,8 +490,8 @@ class MoveInformation{
         char toRank, toFile;
         Piece pieceType, promotionPiece, capturedPiece;             
 
-        int toSquare;
-        int fromSquare;
+        Square toSquare;
+        Square fromSquare;
 
         char fromFile, fromRank; //used for ambiguity
         bool uniqueFile, uniqueRank;
@@ -518,8 +518,8 @@ class MoveInformation{
             pieceType = none;
             promotionPiece = none;
             capturedPiece = none;
-            toSquare = -1;
-            fromSquare = -1;
+            toSquare = NO_SQUARE;
+            fromSquare = NO_SQUARE;
             turn = 0;
             playerColor = white; 
         }
@@ -792,7 +792,8 @@ public:
         enemyPieces = blackPieces;
         enPassantTargetSquare = -1;
 
-        whiteKingPosition,blackKingPosition = NO_SQUARE;
+        whiteKingPosition = NO_SQUARE;
+        blackKingPosition = NO_SQUARE;
         
     }
     //POSSIBLE CAPTURES/MOVES
@@ -1064,7 +1065,7 @@ public:
     //MAKING MOVES...should piece be integer or Piece type
     
     //MANIPULATING BOARD
-    void addPiece(Color color, int piece, int square){
+    void addPiece(Color color,Piece piece, Square square){
             switch(piece){
                 case pawn:
                     set_bit(getPawns(color), square);
@@ -1089,12 +1090,17 @@ public:
                 case king:
                     set_bit(getKing(color), square);
                     set_bit(getPieces(color),square);
+                    if (color == white) whiteKingPosition = square;
+                    else blackKingPosition = square;
+                    break;
+                case none:
+                default:
                     break;
             }
         set_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
-    void removePiece(Color color, int piece, int square){
+    void removePiece(Color color, Piece piece, Square square){
         switch(piece){
             case pawn:
                 pop_bit(getPawns(color), square);
@@ -1119,6 +1125,11 @@ public:
             case king:
                 pop_bit(getKing(color), square);
                 pop_bit(getPieces(color),square);
+                if (color == white) whiteKingPosition = NO_SQUARE;
+                else blackKingPosition = NO_SQUARE;
+                break;
+            case none:
+            default:
                 break;
             }
             
@@ -1126,108 +1137,6 @@ public:
         pop_bit(getOccupiedSquares(),square);
         getEmptySquares() = ~getOccupiedSquares();
     }
-    void makeMove(Board &board, MoveInformation move, int filterTest){  
-        //if (filterTest) std::cout << "[DEBUG] Removing " << move.getPieceLetter(move.capturedPiece) << " from " << move.toSquare << std::endl;
-        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
-        
-        //this is ensured to be legal so responsibility of function is to only update the board
-        Color enemyColor;
-        if (move.playerColor == white){
-            enemyColor = black; 
-        }
-        if (move.playerColor == black){
-            enemyColor = white; 
-        
-        }
-        
-        //if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
-        
-        
-    
-        //CAPTURES/ENPASSANT
-        if (move.isCapture){
-            // if (filterTest) std::cout <<"\nDDDDC\n";
-            // if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
-            if (move.isEnpassant){
-                //place piece at en passant square...
-                //if (filterTest) std::cout<<"\nTHIS IS AN EN PASSANT MOVE\n";
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); //remove piece from origin
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); //to square IS en passant square
-                //remove pawn that was passant'd
-                int pawnToBeRemoved;
-                //color determines if the piece that jumped is above or behind the pawn
-                if (enemyColor == black) pawnToBeRemoved = move.toSquare - 8;
-                else pawnToBeRemoved = move.toSquare + 8;
-
-                board.removePiece(enemyColor,pawn, pawnToBeRemoved);
-      
-                
-                
-                return; //enPassant cannot lead to castling, promotion, etc.
-            }
-            else{ //traditional captures
-              //if (filterTest) std::cout<<"\nTHIS IS AN CAPTURING MOVE\n";
-                board.removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
-                //move the player's piece
-                board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
-                board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
-            }
-        }
-       
-        //CASTLING
-        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
-            if (move.playerColor == white){
-                board.removePiece(white,king,e1); // "pick it up"             
-                board.addPiece(white,king,g1); // "place it down"
-
-                board.removePiece(white,rook,h1);          
-                board.addPiece(white,rook,f1); 
-            }
-            else{
-                board.removePiece(black,king,e8);              
-                board.addPiece(black,king,g8); 
-                
-                board.removePiece(black,rook,h8);          
-                board.addPiece(black,rook,f8); 
-            }
-        }
-        else if (move.isQueenCastle){
-            if (move.playerColor == white){
-                board.removePiece(white,king,e1); // "pick it up"             
-                board.addPiece(white,king,c1); // "place it down"
-
-                board.removePiece(white,rook,a1);          
-                board.addPiece(white,rook,d1); 
-            }
-            else{
-                board.removePiece(black,king,e8);           
-                board.addPiece(black,king,c8);
-
-                board.removePiece(black,rook,a8);          
-                board.addPiece(black,rook,d8); 
-            }
-        }
-        //REGULAR MOVES (Passive/NonCapture)
-        else if (move.isCapture == 0){ 
-            //if (filterTest) std::cout <<"\nDDDDC\n";
-            board.removePiece(move.playerColor,move.pieceType,move.fromSquare); // "pick it up"
-            // displayBoard();
-            
-            board.addPiece(move.playerColor,move.pieceType,move.toSquare); // "place it down"
-            // displayBoard();
-            
-            
-        }
-        
-        //PROMOTIONS
-        if (move.isPromotion){
-            //any move that is a promotion must have triggered one of the previous bool statements, so the only change to make is to replace the pawn from the TO square with whatever it promotes to
-            board.removePiece(move.playerColor,pawn,move.toSquare); //all promotions are pawn piece type
-            board.addPiece(move.playerColor,move.promotionPiece,move.toSquare);
-        }
-        
-    } 
-    
     void setPieceAtSquare(Square targetSquare, Piece pieceType, Color colorOfPieceBeingMoved){
         uint64_t mask = 1ULL << targetSquare;
         switch(pieceType){
@@ -1286,9 +1195,82 @@ public:
         Color colorOfPieceBeingMoved = currentBoardState.getColorAtSquare(from);
         currentBoardState.removePiece(colorOfPieceBeingMoved , pieceBeingMoved , from);
         currentBoardState.addPiece(colorOfPieceBeingMoved , pieceBeingMoved , to);
+
+        if (pieceBeingMoved == king){
+            if (colorOfPieceBeingMoved == white) whiteKingPosition = to;
+            else blackKingPosition = to;
+        }
     }
 
+    void makeMove(MoveInformation move, int filterTest){  
+        //if (filterTest) std::cout << "[DEBUG] Removing " << move.getPieceLetter(move.capturedPiece) << " from " << move.toSquare << std::endl;
+        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
+        
+        //this is ensured to be legal so responsibility of function is to only update the board
+        updateFriendlyEnemy(move.playerColor);
+        Color enemyColor = !move.playerColor;
+        //if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
+        
+    
+        //CAPTURES/ENPASSANT
+        if (move.isCapture){
+           
+            // if (filterTest) std::cout<< "\n\n[Capture][EnPassant] = " << move.isCapture << move.isEnpassant << std::endl;
+            if (move.isEnpassant){
+                movePiece(move.fromSquare,move.toSquare);
+                Square pawnToBeRemoved;
+                //color determines if the piece that jumped is above or behind the pawn
+                if (enemyColor == black) pawnToBeRemoved = Square(int(move.toSquare) - 8);
+                else pawnToBeRemoved = Square(int(move.toSquare) + 8);
+                
+                removePiece(enemyColor,pawn, pawnToBeRemoved);
+      
+                return; //enPassant cannot lead to castling or promotion
+            }
+            else{ //traditional captures
+                removePiece(enemyColor,move.capturedPiece,move.toSquare); //remove the captured piece
+                //move the player's piece
+                movePiece(move.fromSquare , move.toSquare); //move the capturing piece
+            }
+        }
+       
+        //CASTLING
+        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
+            if (move.playerColor == white){
+                movePiece(e1,g1); //move the king
+                movePiece(h1,f1); //move the rook
+            }
+            else{
+                movePiece(e8,g8); //move the king
+                movePiece(h8,f8); //move the rook
 
+            }
+        }
+        else if (move.isQueenCastle){
+            if (move.playerColor == white){
+                movePiece(e1,c1); //move the king
+                movePiece(a1,d1); //move the rook
+            }
+            else{
+                movePiece(e8,c8); //move the king
+                movePiece(a8,d8); //move the rook
+            }
+        }
+        //REGULAR MOVES (Passive/NonCapture)
+        else if (move.isCapture == 0) movePiece(move.fromSquare , move.toSquare);
+
+        //PROMOTIONS
+        if (move.isPromotion){
+            // any move that is a promotion must have triggered one of the previous bool statements
+            // so the only change to make is to replace the pawn from the TO square with whatever it promotes to
+
+            removePiece(move.playerColor,pawn,move.toSquare); //all promotions are pawn piece type
+            addPiece(move.playerColor,move.promotionPiece,move.toSquare);
+        }
+        
+    } 
+    
+    
 
     bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare){
        
@@ -1654,7 +1636,7 @@ public:
         for (int i = 0; i < pseudoLegalMoves.size();i++){
             Board copyBoard = boardstate;
             Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
-            copyBoard.makeMove(copyBoard,pseudoLegalMoves.at(i),0);
+            copyBoard.makeMove(pseudoLegalMoves.at(i),0);
             if (isCheckMate(opponentColor,copyBoard)){
                 //copyBoard.displayBoardPolished();
                 //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
@@ -1725,7 +1707,7 @@ public:
         int index = 0;
         for (MoveInformation move: legalMovesList){
             Board copy = board;
-            copy.makeMove(copy,move,0);
+            copy.makeMove(move,0);
             if (copy.isKingInCheck(move.playerColor)){
                 legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
                 continue;
@@ -1786,9 +1768,9 @@ public:
                 MoveInformation legalMove;
                 legalMove.playerColor = color;                                                                              //moves are created assumed white, must reassign black
                 //generate the attributes of the move
-                legalMove.pieceType = pieceType;
-                legalMove.fromSquare = fromSquare;
-                legalMove.toSquare = destination;
+                legalMove.pieceType = Piece(pieceType);
+                legalMove.fromSquare = Square(fromSquare);
+                legalMove.toSquare = Square(destination);
 
                 legalMove.toFile = 'a' + (destination % 8) ;
                 legalMove.toRank = '1' + (destination / 8 );
@@ -1840,7 +1822,7 @@ public:
                     CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
                 */
                Board copyBoard = getBoard();
-                copyBoard.makeMove(copyBoard,legalMove,0);
+                copyBoard.makeMove(legalMove,0);
                if ( !(copyBoard.isKingInCheck(legalMove.playerColor))){ //if the move doesnt put your own king in check
                     //add move to list
                     legalMove.chessNotation = getMoveString(legalMove);
@@ -2099,7 +2081,7 @@ public:
         // rank = numbers, File == files
         
         int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '0' - 1); // casting both rank and file to integers and calculating the square index
+        move.toSquare = Square( (asciiFile - 1) + 8 * (move.toRank - '0' - 1) ); // casting both rank and file to integers and calculating the square index
         //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
         return move;
     }
@@ -2226,7 +2208,7 @@ public:
         moveStr = moveStr.substr(0, moveStr.length() - 1);
         // std::cout << moveStr << std::endl;
         int asciiFile = static_cast<int>(move.toFile) - 96; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-        move.toSquare = (asciiFile - 1) + 8 * (move.toRank - '1' ); // casting both rank and file to integers and calculating the square index
+        move.toSquare = Square( (asciiFile - 1) + 8 * (move.toRank - '1' ) ); // casting both rank and file to integers and calculating the square index
         if (move.isCapture)
         {
             moveStr = moveStr.substr(0, moveStr.length() - 1);
@@ -2330,7 +2312,7 @@ public:
         moveBeingMade = createMoveFromString(getBoard(),turn,chessNotation);
         
         MoveInformation matchingMove = getMatchingMove(getBoard(), generateLegalMoves(getBoard(), turn) , moveBeingMade);
-        getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        getBoard().makeMove(matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
         if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
         getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;
@@ -2404,7 +2386,7 @@ public:
 
         matchingMove.printMoveInfo();
         
-        getBoard().makeMove(getBoard(), matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        getBoard().makeMove(matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
         if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
         getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;

@@ -89,6 +89,11 @@ int main() {
         game.getGameTurnCount()++;
         game.getBoard().updateFriendlyEnemy(white);
         moveList = game.generateLegalMoves(game.getBoard(),white);
+        game.identifyCheckMateMoves(moveList,game.getBoard());
+        game.updateNotationForMoveList(moveList);
+        moveList.at(33).printMoveInfo();
+        game.createMoveFromString(game.getBoard(),white,"Qxe5+").printMoveInfo();
+        
         game.getBoard().displayBoardPolished();
         game.takeGameHalfTurn(white);
 
@@ -99,6 +104,8 @@ int main() {
         //BLACK TURN
         game.getBoard().updateFriendlyEnemy(black);
         moveList = game.generateLegalMoves(game.getBoard(),black);
+        game.identifyCheckMateMoves(moveList,game.getBoard());
+        game.updateNotationForMoveList(moveList);
         game.getBoard().displayBoardPolished();
         game.takeGameHalfTurn(black);
 

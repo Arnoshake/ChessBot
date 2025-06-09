@@ -1889,12 +1889,17 @@ public:
         // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
         //printMoveList(allLegalMoves);
         pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to possible moves
+        //identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to possible moves
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
         for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
             moves.chessNotation = getMoveString(moves);
         }
         return allLegalMoves;
+    }
+    void updateNotationForMoveList(std::vector<MoveInformation> &legalMovesList){
+        for (auto& moves: legalMovesList){ //update the strings of all moves after bad moves removed or info updated
+            moves.chessNotation = getMoveString(moves);
+        }
     }
     std::vector<MoveInformation> generateLegalMovesOnBoard(Board boardstate, Color color){
         std::vector<MoveInformation> allLegalMoves;
@@ -1928,91 +1933,13 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
         pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
-        identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to moves
+        // identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to moves
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
 
         return allLegalMoves;
 
     }
-    std::vector<MoveInformation> generateLegalMovesNoCheckTags(Board boardstate, Color color){ 
-        //does not filter out moves that keep in check, does not update ambiguity, etc.
-        // this returns a list of moves that are pseudo-legal
-        std::vector<MoveInformation> allLegalMoves;
-        std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd.clear();                                                             // is this necessary?
-        
-        if (boardstate.canKingCastle(boardstate,color)){
-            // std::cout << "\n DEBUG : CASTLING IS ADDED\n";
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
-        }
-        if (boardstate.canQueenCastle(boardstate,color)){
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O-O"));
-        }
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-        // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
-        //printMoveList(allLegalMoves);
-    
-        for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
-            moves.chessNotation = getMoveString(moves);
-        }
-        return allLegalMoves;
-    }
-    std::vector<MoveInformation> generateLegalMovesOnBoardNoCheckTags(Board board, Color color){
-        std::vector<MoveInformation> allLegalMoves;
-        std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKnights(color),knight,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBishops(color),bishop,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getRooks(color),rook,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getQueens(color),queen,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKing(color),king,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd.clear();                                                             // is this necessary?
-        if (board.canKingCastle(board,color)){
-            //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
-        }
-        if (board.canQueenCastle(board,color)){
-            movesToAdd.push_back(createMoveFromString(board,color, "O-O-O"));
-        }
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
-
-        return allLegalMoves;
-
-    }
-
+   
     void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
         int index = 0;
         for (MoveInformation move: legalMovesList){
@@ -2386,8 +2313,8 @@ public:
             if ( (targetMove.isCapture != move.isCapture)|| (targetMove.capturedPiece != move.capturedPiece)) continue;
             if ( (targetMove.isPromotion != move.isPromotion) || (targetMove.promotionPiece != move.promotionPiece) ) continue;
             if (targetMove.isEnpassant != move.isEnpassant) continue;
-            if (targetMove.isCheck != move.isCheck) continue;
-            if (targetMove.isCheckMate != move.isCheckMate) continue;
+            //if (targetMove.isCheck != move.isCheck) continue;
+            //if (targetMove.isCheckMate != move.isCheckMate) continue;
             //dont check ambiguity flag... check the more appliciable,related markers that imply ambiguity
             if (targetMove.uniqueFile && targetMove.fromFile != (move.fromSquare % 8) ) continue;
             if (targetMove.uniqueRank && targetMove.fromRank != (move.fromSquare / 8) ) continue;
@@ -2441,12 +2368,16 @@ public:
         else std::cout << "B.";
         
         std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(getBoard(), turn);
+        identifyCheckMateMoves(possibleLegalMoves,getBoard() );
+        updateNotationForMoveList(possibleLegalMoves);
         MoveInformation matchingMove; //initialized inside loop
         while (true) {
             std::string userInput;
             std::cout << "\nPlease make your move! (standard chess notation): ";
             while (1){
                 std::cin >> userInput;
+                // createMoveFromString(getBoard(), turn, userInput).printMoveInfo();
+                // possibleLegalMoves.at(33).printMoveInfo();
                 if (userInput == "quit" || userInput == "Quit" || userInput == "q" || userInput == "Q"){
                 std::cout << "\nQuitting program...\n";
                 std::exit(0);
@@ -2516,11 +2447,12 @@ public:
         if (!isKingInCheck(boardState,colorOfKing)) return false; //if the king isnt in check, it cant be mate
         // std::cout <<"\nCheckpoint A\n";
         //std::cout << "\nDebug: checkpoint 2\n";
-        std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoardNoCheckTags(boardState, colorOfKing);
+        std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);
+        // dont tag checkmates. quality of moves do no matter, quantity does
         // boardState.displayBoardPolished();
     
-        // std::cout <<"\nLegal Moves:";
-        // printMoveList(legalMoves);
+        std::cout <<"\nLegal Moves:";
+        printMoveList(legalMoves);
         // std::cout <<"\n";
        //  std::cout <<"\nCheckpoint B\n";
        //std::cout << "\nDebug: checkpoint 3: " << legalMoves.empty() << std::endl;

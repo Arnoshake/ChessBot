@@ -76,17 +76,12 @@ int main() {
 
     game.makeManualGameHalfTurn(white,"e4");
     game.makeManualGameHalfTurn(black,"e5");  
-    game.makeManualGameHalfTurn(white,"Qf3");
-    game.makeManualGameHalfTurn(black,"a6");    
+    game.makeManualGameHalfTurn(white,"Qh5");
+    game.makeManualGameHalfTurn(black,"Nc6");    
     game.makeManualGameHalfTurn(white,"Bc4");
-    game.makeManualGameHalfTurn(black,"a5");  
-    game.makeManualGameHalfTurn(white,"Nh3");
-    game.makeManualGameHalfTurn(black,"a4");  
-    game.makeManualGameHalfTurn(white,"Ng5");
-    game.makeManualGameHalfTurn(black,"a3");  
-
-    game.makeManualGameHalfTurn(white,"Qg3");
-    game.makeManualGameHalfTurn(black,"b6");   
+    game.makeManualGameHalfTurn(black,"Nf6");  
+    //game.makeManualGameHalfTurn(white,"Qxf7"); // checkmate?
+ 
 
     while (1){
 

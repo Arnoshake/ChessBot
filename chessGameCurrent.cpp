@@ -1798,12 +1798,12 @@ public:
                 //copyBoard.displayBoardPolished();
                 //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
                 pseudoLegalMoves.at(i).isCheckMate = true;
-                std::cout << "\nTesting move: \n";
-                pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
-                std::cout << "\nBoard after move:\n";
-                copyBoard.displayBoardPolished();
-                std::cout << "\nOpponent legal moves:\n";
-                printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
+                // std::cout << "\nTesting move: \n";
+                // pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
+                // std::cout << "\nBoard after move:\n";
+                // copyBoard.displayBoardPolished();
+                // std::cout << "\nOpponent legal moves:\n";
+                // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
 
             }
             else if (isKingInCheck( copyBoard , opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
@@ -1858,22 +1858,22 @@ public:
     std::vector<MoveInformation> generateLegalMoves(Board boardstate, Color color){ 
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKnights(color),knight,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBishops(color),bishop,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getRooks(color),rook,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getQueens(color),queen,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKing(color),king,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
         movesToAdd.clear();                                                             // is this necessary?
@@ -1896,63 +1896,65 @@ public:
         }
         return allLegalMoves;
     }
-    std::vector<MoveInformation> generateLegalMovesOnBoard(Board board, Color color){
+    std::vector<MoveInformation> generateLegalMovesOnBoard(Board boardstate, Color color){
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKnights(color),knight,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBishops(color),bishop,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getRooks(color),rook,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getQueens(color),queen,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKing(color),king,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
         movesToAdd.clear();                                                             // is this necessary?
-        if (board.canKingCastle(board,color)){
+        if (boardstate.canKingCastle(boardstate,color)){
             //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
             movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
         }
-        if (board.canQueenCastle(board,color)){
+        if (boardstate.canQueenCastle(boardstate,color)){
             movesToAdd.push_back(createMoveFromString(board,color, "O-O-O"));
         }
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        identifyCheckMateMoves(allLegalMoves,board); //ammends check or mate to moves
+        pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
+        identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to moves
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
 
         return allLegalMoves;
 
     }
     std::vector<MoveInformation> generateLegalMovesNoCheckTags(Board boardstate, Color color){ 
+        //does not filter out moves that keep in check, does not update ambiguity, etc.
+        // this returns a list of moves that are pseudo-legal
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getPawns(color),pawn,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKnights(color),knight,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getBishops(color),bishop,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getRooks(color),rook,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getQueens(color),queen,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
-        movesToAdd = generatePseudoLegalMovesFromBitboard(board.getKing(color),king,color);
+        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
 
         movesToAdd.clear();                                                             // is this necessary?
@@ -1967,8 +1969,7 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
         //printMoveList(allLegalMoves);
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+    
         for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
             moves.chessNotation = getMoveString(moves);
         }

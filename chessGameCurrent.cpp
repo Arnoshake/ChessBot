@@ -432,8 +432,14 @@ bool isSet(uint64_t bitboard, int square){
     return (bitboard & (1ULL << square) ) != 0 ;
 }
 
+const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
+const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
+const uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
+const uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
 
-
+enum gameEndingCondition{
+    whiteWins, blackWins,stalemate,ongoing
+};
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
     a2 = 8,  b2,  c2,  d2,  e2,  f2,  g2,  h2,
@@ -497,6 +503,8 @@ class MoveInformation{
         bool uniqueFile, uniqueRank;
         int turn;
         Color playerColor;
+
+       
         
 
 
@@ -679,12 +687,7 @@ public:
 
         std::cout << "==========================" << std::endl;
     }
-   //prevents leftside overflow
-    const uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
-    const uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
-    //prevents rightside overflow
-    const uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
-    const uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
+   
     int enPassantTargetSquare; //probably should be private but shouldnt be modified as it will be passed in board creation
     Board(){
         whitePawns = 0ULL; 
@@ -796,273 +799,6 @@ public:
         blackKingPosition = NO_SQUARE;
         
     }
-    //POSSIBLE CAPTURES/MOVES
-    uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){     // pawn moves cant capture...
-      
-        uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
-    
-       uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-       uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-    
-        uint64_t possibleMoves = 0ULL;
-        uint64_t possibleCaptures = 0ULL;
-    
-        if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
-            uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
-            uint64_t doublePush = ( ( ( (0xFF00 & pawnBitBoard) << 8) & emptySquares ) << 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
-        
-            possibleMoves = singlePush | doublePush ;
-            
-            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
-            possibleMoves |= possibleCaptures;
-            possibleMoves &= ~(friendlyPieces); // may be redundant as possibleCaptures is anded with enemyPieces
-        }
-        else{ //identical logic, different variable values and shifting operator
-            uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
-            uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & emptySquares ) >> 8 ) & emptySquares; //checks for unmoved pawns, single pushes, pushes again
-        
-            possibleMoves = singlePush | doublePush ;
-            
-            possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
-            possibleMoves |= possibleCaptures;
-            possibleMoves &= ~(friendlyPieces);
-        }
-        return possibleMoves;
-    }
-    uint64_t possibleKnightMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
-        /*
-            15  17
-         6         10
-               x
-         10         6
-            17  15
-        
-        */
-        //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
-
-        uint64_t knightBitBoard = boardOfInterest.getKnights(colorOfInterest);
-        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-       
-        uint64_t bitboard = knightBitBoard;
-        uint64_t knightMoves = 0ULL;
-    
-        //will not change right now because it aint broke... but!
-        //I dont need both knightMoves and bitboard. I created these to prevent cascading shifting but by assigning results to an outside/secondary board (knightMoves), cascading is avoided
-        knightMoves |= (bitboard & notHFile) << 17;
-        knightMoves |= (bitboard & notAFile) << 15;
-        knightMoves |= (bitboard & notGHFile) << 10;
-        knightMoves |= (bitboard & notABFile) << 6;
-        knightMoves |= (bitboard & notAFile) >> 17;
-        knightMoves |= (bitboard & notHFile) >> 15; 
-        knightMoves |= (bitboard & notABFile) >> 10; 
-        knightMoves |= (bitboard & notGHFile) >> 6; 
-        knightMoves &= ~friendlyPieces;
-        return knightMoves;
-    }
-    uint64_t possibleBishopMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
-       
-        uint64_t bishopBitboard = boardOfInterest.getBishops(colorOfInterest);
-        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-        
-
-        uint64_t bishopMoves = 0ULL;
-        for (int square = 0; square < 64; square++){ // for every bishop, calculate the attacks
-            if (isSet(bishopBitboard,square)){
-                bishopMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
-            }
-        }
-        bishopMoves &= ~friendlyPieces;
-        return bishopMoves;
-    }
-    uint64_t possibleRookMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
-    
-        uint64_t rookBitBoard = boardOfInterest.getRooks(colorOfInterest);
-        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-      
-        uint64_t rookMoves = 0ULL;
-        for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
-            if (isSet(rookBitBoard,square)){
-                rookMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
-            }
-        }
-        rookMoves &= ~ friendlyPieces;
-        return rookMoves;
-    }
-    uint64_t possibleQueenMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
-        
-        uint64_t queenBitBoard = boardOfInterest.getQueens(colorOfInterest);
-        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-      
-        uint64_t queenMoves = 0ULL;
-        for (int square = 0; square < 64; square++){ 
-            if (isSet(queenBitBoard,square)){
-                queenMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
-                queenMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
-            }
-        }
-        queenMoves &= ~ friendlyPieces;
-
-        return queenMoves;
-    }
-    uint64_t possibleKingMovesBitBoard(Board boardOfInterest,Color colorOfInterest){
-
-        uint64_t kingBitBoard = boardOfInterest.getKing(colorOfInterest);
-        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-      
-        uint64_t kingAttack = 0ULL;
-        /*
-           789
-           1K1
-           987
-        */
-        //top
-        kingAttack |= (notAFile & kingBitBoard) >> 9;
-        kingAttack |= kingBitBoard >> 8;
-        kingAttack |= (notAFile & kingBitBoard) >> 7; 
-        kingAttack |= (notHFile & kingBitBoard) >> 1;
-        //bottom
-        kingAttack |= (notHFile & kingBitBoard) << 7;
-        kingAttack |= kingBitBoard << 8;
-        kingAttack |= (notHFile & kingBitBoard) << 9;
-        kingAttack |= (notAFile & kingBitBoard) << 1;
-    
-        kingAttack &= ~friendlyPieces;
-        return (kingAttack);
-    }
-        //PIECE MOVE GENERATION BY SQUARE
-    uint64_t attackedByPawns(Board boardOfInterest,Color colorOfInterest){       
-      
-        uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
-        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
-    
-        uint64_t possibleCaptures = 0ULL;
-    
-        if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
-            
-            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
-        }
-        else{ //identical logic, different variable values and shifting operator
-            possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & enemyPieces;
-            possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & enemyPieces;
-        }
-        return possibleCaptures;
-    }
-    uint64_t getKnightMask(int square){
-        /*
-            15  17
-         6         10
-               x
-         10         6
-            17  15
-        
-     up is SL, down is SR
-        */
-        //prevents leftside overflow
-        uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
-        uint64_t notABFile =  0xFCFCFCFCFCFCFCFCULL;
-    
-        //prevents rightside overflow
-        uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
-        uint64_t notGHFile =  0x3F3F3F3F3F3F3F3FULL;
-        //size of number handles up and down overflow (greater than or less than the upper/lower bound)
-        //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
-        uint64_t knightMoves = 0ULL;
-        uint64_t bitboard = 0ULL;
-        
-       uint64_t startingSquare = 1ULL << square;
-       bitboard |= startingSquare;
-       //step 1
-       if ( (bitboard >> 17) & (notHFile) ) knightMoves |= (bitboard >> 17);
-       if ( (bitboard >> 15) & (notAFile) ) knightMoves |= (bitboard >> 15);
-       if ( (bitboard >> 10) & (notGHFile) ) knightMoves |= (bitboard >> 10);
-       if ( (bitboard >> 6)  & (notABFile) ) knightMoves |= (bitboard >> 6);
-       
-       if ( (bitboard << 17) & (notAFile) ) knightMoves |= (bitboard << 17);
-       if ( (bitboard << 15) & (notHFile) ) knightMoves |= (bitboard << 15);
-       if ( (bitboard << 10) & (notABFile) ) knightMoves |= (bitboard << 10);
-       if ( (bitboard << 6)  & (notGHFile) ) knightMoves |= (bitboard << 6);
-        
-        return knightMoves;
-    }
-    uint64_t getPawnMask(int square, Color side){
-        int rank = square / 8;
-        int file = square % 8;
-        //1 = white, 0 = black
-        uint64_t possibleMoves = 0ULL;
-        uint64_t possibleCaptures = 0ULL;
-        uint64_t pawnBitBoard = 1ULL << square;
-        uint64_t friendlyPieces;
-        uint64_t enemyPieces;
-        if (side == white){ // pawns move up.. << & en Passant rank = 4
-            friendlyPieces = getPieces(white);
-            enemyPieces = getPieces(black);
-            uint64_t singlePush = ( pawnBitBoard << 8) & emptySquares ; 
-            uint64_t doublePush = 0ULL;
-            if (rank == 1 && singlePush) doublePush = (singlePush << 8) & emptySquares;
-
-             
-            // if (rank == 2 & singlePush){
-            //     doublePush = (singlePush << 8) & emptySquares;
-            // }
-            possibleMoves = singlePush | doublePush ;
-            pawnBitBoard = 1ULL << square;
-            possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
-            possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
-            possibleMoves |= possibleCaptures;
-        }
-        else{ //identical logic, different variable values and shifting operator
-            friendlyPieces = getPieces(black);
-            enemyPieces = getPieces(white);
-    
-            uint64_t singlePush = ( pawnBitBoard >> 8) & emptySquares ; 
-            uint64_t doublePush = 0ULL;
-            if (rank == 6 && singlePush) doublePush = (singlePush >> 8) & emptySquares;
-            possibleMoves = singlePush | doublePush ;
-                                                                                            //DONT FORGET TO REMOVE
-            possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & (enemyPieces | (1ULL << enPassantTargetSquare) );
-            possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & (enemyPieces | (1ULL << enPassantTargetSquare) );
-            possibleMoves |= possibleCaptures;
-        }
-        
-        possibleMoves &= ~(friendlyPieces);
-        return possibleMoves;
-      
-    
-    }
-    uint64_t getKingMask(int square){
-        //prevents leftside overflow
-        uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
-        //prevents rightside overflow
-        uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
-     
-    
-        int rank = square / 8;
-        int file = square % 8;
-        uint64_t kingAttack = 0ULL;
-        
-        if ( rank > 0) kingAttack |= 1ULL << (square - 8); // down
-        if ( rank < 7) kingAttack |= 1ULL << (square + 8); // up
-        if ( file > 0) kingAttack |= 1ULL << (square - 1); // left
-        if ( file < 7) kingAttack |= 1ULL << (square + 1); // right
-    
-        if ( rank < 7 && file < 7) kingAttack |= 1ULL << (square + 9); //top right
-        if ( rank < 7 && file > 0) kingAttack |= 1ULL << (square + 7); // top left
-        if ( rank > 0 && file > 0) kingAttack |= 1ULL << (square - 9); // bot left
-        if ( rank > 0 && file < 7) kingAttack |= 1ULL << (square - 7); // bot left
-        
-    
-        return kingAttack;
-    }
-   //rook, bishop, queen are all covered by the provided get_bishop_attack and get_rook_attack functions 
-    //MAKING MOVES...should piece be integer or Piece type
     
     //MANIPULATING BOARD
     void addPiece(Color color,Piece piece, Square square){
@@ -1275,18 +1011,18 @@ public:
     bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare){
        
         Color opponentColor = !colorOfSquare;
-        uint64_t opponentMoves = attackedByPawns(*this, opponentColor) | possibleKnightMovesBitBoard(*this, opponentColor) | possibleBishopMovesBitBoard(*this, opponentColor) | 
-        possibleRookMovesBitBoard(*this, opponentColor) | possibleQueenMovesBitBoard(*this, opponentColor) | possibleKingMovesBitBoard(*this,opponentColor);
+        uint64_t opponentMoves = moveGen.attackedByPawns(*this, opponentColor) | moveGen.possibleKnightMovesBitBoard(*this, opponentColor) | moveGen.possibleBishopMovesBitBoard(*this, opponentColor) | 
+                                moveGen.possibleRookMovesBitBoard(*this, opponentColor) | moveGen.possibleQueenMovesBitBoard(*this, opponentColor) | moveGen.possibleKingMovesBitBoard(*this,opponentColor);
         //opponentMoves includes King because this asks if a square is in check, different than if king is in check
         //std::cout <<"\nCheckpoint D\n";
         return  ( ((1ULL << squareOfInterest) & opponentMoves) != 0); 
     }
     bool isKingInCheck(Color colorOfKing){
-        
+        MoveGenerator moveGen;
         uint64_t kingLocation = getKing(colorOfKing);
         Color opponentColor = !colorOfKing;
-        uint64_t opponentMoves = attackedByPawns(*this, opponentColor) | possibleKnightMovesBitBoard(*this, opponentColor) | possibleBishopMovesBitBoard(*this, opponentColor) | 
-                                    possibleRookMovesBitBoard(*this, opponentColor) | possibleQueenMovesBitBoard(*this, opponentColor);
+        uint64_t opponentMoves = moveGen.attackedByPawns(*this, opponentColor) | moveGen.possibleKnightMovesBitBoard(*this, opponentColor) | moveGen.possibleBishopMovesBitBoard(*this, opponentColor) | 
+                                    moveGen.possibleRookMovesBitBoard(*this, opponentColor) | moveGen.possibleQueenMovesBitBoard(*this, opponentColor);
        
         return  ( (kingLocation & opponentMoves) != 0); //if there is overlap (>0) return true
     }
@@ -1591,501 +1327,43 @@ void displayBoardPolished() {
 
 };
 
-enum gameEndingCondition{
-    whiteWins, blackWins,stalemate,ongoing
-};
-
-class Game
-{
-private:
-    Color playerTakingTurnColor;
-    //bool isGameOver;
-    Board board;
-    int turnCount; //index for move/board history
-    
-public:
-    gameEndingCondition gameCondition;
-
-    std::vector<MoveInformation> masterMoveList; //holds all moves made (game turn - 1 = index)
-    std::vector<Board> boardStates; //holds all board states
-    
-    Game(){
-        board.initializeBoard();
-        boardStates.push_back(board);
-        playerTakingTurnColor = white;
-        gameCondition = ongoing;
-        turnCount = 0;
-    }
-    //GETTER METHODS
-    Board& getBoard(){
-        return board;
-    }
-    int& getGameTurnCount(){
-        return turnCount;
-    }
-    Color& getColorOfPlayerTakingTurn(){
-        return playerTakingTurnColor;
-    }
-    //GAME/PLAYER CONDITIONS
-    //MOVE GENERATION
-    
-    //HELPER METHODS TO CLEAN UP PSEUDO MOVE GEN
-    void identifyCheckMateMoves(std::vector<MoveInformation> &pseudoLegalMoves, Board boardstate){
-        //the pseudoLegalMoves vector contains all moves that are possible that do not put king in check
-
-        for (int i = 0; i < pseudoLegalMoves.size();i++){
-            Board copyBoard = boardstate;
-            Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
-            copyBoard.makeMove(pseudoLegalMoves.at(i),0);
-            if (isCheckMate(opponentColor,copyBoard)){
-                //copyBoard.displayBoardPolished();
-                //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
-                pseudoLegalMoves.at(i).isCheckMate = true;
-                if (pseudoLegalMoves.at(i).isCheckMate == true){
-                    pseudoLegalMoves.at(i).printMoveInfo();
-                    copyBoard.displayBoardPolished();
-                    std::vector<MoveInformation> debugger = generateLegalMoves(copyBoard,opponentColor);
-                    printMoveList(debugger);
-                }
-                // std::cout << "\nTesting move: \n";
-                // pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
-                // std::cout << "\nBoard after move:\n";
-                // copyBoard.displayBoardPolished();
-                // std::cout << "\nOpponent legal moves:\n";
-                // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
-
-            }
-            else if (boardstate.isKingInCheck(opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
-        }
-    }
-    void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
-        //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
-        //void because it will edit the list of moves directly
-        for (auto& move : legalMovesList) {
-            std::vector<MoveInformation> conflictingMovesList;
-            for (const auto& other : legalMovesList) {
-    
-                if (&move == &other ) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
-                if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
-                    conflictingMovesList.push_back(other);
-                }
-            }
-            if (!conflictingMovesList.empty()){ //if conflicting moves exist (ambiguity!)
-                    move.isAmbiguous = true;
-                    bool fileSufficient = true, rankSufficient = true;
-                    
-                    for (auto& conflictingMove : conflictingMovesList){
-                        if ( (conflictingMove.fromSquare%8) == (move.fromSquare%8) ) fileSufficient = false;
-                        
-                        if ( (conflictingMove.fromSquare/8) == (move.fromSquare/8) ) rankSufficient = false;
-                    
-                    }
-                    
-
-                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
-                    if (fileSufficient) {
-                        move.fromFile = 'a' + (move.fromSquare % 8); 
-                        move.uniqueFile = true;
-                        
-                    } 
-                    if (rankSufficient) {
-                        move.fromRank = '1' + (move.fromSquare / 8); 
-                        move.uniqueRank = true;
-                    } 
-                    if (!rankSufficient && !fileSufficient) {
-                        move.fromRank = '1' + (move.fromSquare / 8); 
-                        move.fromFile = 'a' + (move.fromSquare % 8); 
-                        move.uniqueRank = true;
-                        move.uniqueFile = true;
-                    } 
-                }
-           
-        }
-        
-    }
-    void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
-        int index = 0;
-        for (MoveInformation move: legalMovesList){
-            Board copy = board;
-            copy.makeMove(move,0);
-            if (copy.isKingInCheck(move.playerColor)){
-                legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
-                continue;
-            }
-            else{
-            index++;
-            }
-        }
-
-    }
-    void updateNotationForMoveList(std::vector<MoveInformation> &legalMovesList){
-        for (auto& moves: legalMovesList){ //update the strings of all moves after bad moves removed or info updated
-            moves.chessNotation = getMoveString(moves);
-        }
-    }
-
-    std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
-        if (bitBoard == 0ULL) return {};
-        board.updateFriendlyEnemy(color);
-        std::vector<MoveInformation> moveListForBoard; 
-        uint64_t possibleMask = 0ULL;
-        while (bitBoard){
-            int fromSquare = __builtin_ctzll(bitBoard);  // finds the LSB that is set to one
-            switch(pieceType){
-                case pawn:
-                    possibleMask= board.getPawnMask(fromSquare,color);
-                    break;
-                case knight:
-                    possibleMask = board.getKnightMask(fromSquare);
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case bishop:
-                    possibleMask = get_bishop_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-        
-                    break;
-                case rook:
-                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-                  
-                    break;
-                case queen:
-                    possibleMask = get_rook_attacks(fromSquare,board.getOccupiedSquares() ) | get_bishop_attacks(fromSquare,board.getOccupiedSquares());
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case king:
-                    possibleMask = board.getKingMask(fromSquare);
-                    possibleMask &= ~board.getFriendlyPieces();
-                    break;
-                case none:  //idealy impossible... if a bit is set, a piece must be present
-                    break;
-                
-            }
-        
-            while (possibleMask){ //for each possible destination (set bit in possible mask)
-                int destination = __builtin_ctzll(possibleMask); //iterate to the first set bit/piece on the board
-
-                MoveInformation legalMove;
-                legalMove.playerColor = color;                                                                              //moves are created assumed white, must reassign black
-                //generate the attributes of the move
-                legalMove.pieceType = Piece(pieceType);
-                legalMove.fromSquare = Square(fromSquare);
-                legalMove.toSquare = Square(destination);
-
-                legalMove.toFile = 'a' + (destination % 8) ;
-                legalMove.toRank = '1' + (destination / 8 );
-                //now grab information from board at the destination
-
-                //captures
-                
-            
-                if (destination == board.enPassantTargetSquare && pieceType == pawn && board.getPieceAtSquare(destination) == none){
-                    legalMove.isCapture = true;
-                    legalMove.isEnpassant = true;
-                    legalMove.capturedPiece = pawn;
-                }
-                else if (board.getPieceAtSquare(destination) != none){
-                    legalMove.isCapture = true;
-                    legalMove.capturedPiece = board.getPieceAtSquare(destination);
-                }
-                else{
-                    legalMove.isCapture = false;
-                }
-                
-                //castling
-                if (color == white) { //castling will never be generated from a bitboard. its outside the normal rules for king movement
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == g1 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == c1 ) legalMove.isQueenCastle = true;
-                }
-                if (color == black){
-                    
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == g8 ) legalMove.isKingCastle = true;
-                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == c8 ) legalMove.isQueenCastle = true;
-                }
-
-                //promotions
-                if (color == white) { 
-                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) ){
-                        legalMove.isPromotion = true;
-                    }
-                }
-                else{  
-                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ){
-                        legalMove.isPromotion = true;
-                    }
-                }
-                
-                //en passant
-                if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == board.enPassantTargetSquare) legalMove.isEnpassant = true;
-
-                /*
-                    CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
-                */
-               Board copyBoard = getBoard();
-                copyBoard.makeMove(legalMove,0);
-               if ( !(copyBoard.isKingInCheck(legalMove.playerColor))){ //if the move doesnt put your own king in check
-                    //add move to list
-                    legalMove.chessNotation = getMoveString(legalMove);
-                    if (legalMove.isPromotion){                               
-                        legalMove.promotionPiece = bishop;
-                        moveListForBoard.push_back(legalMove);
-                        legalMove.promotionPiece = rook;
-                        moveListForBoard.push_back(legalMove);
-                        legalMove.promotionPiece = queen;
-                        moveListForBoard.push_back(legalMove);
-                        legalMove.promotionPiece = knight;
-                        moveListForBoard.push_back(legalMove);
-                    }
-                    else{
-                    moveListForBoard.push_back(legalMove);
-                    }
-               }
-                        
-               
-                possibleMask &= (possibleMask - 1); //clear the bit as it is done with
-            }
-
-            bitBoard &= (bitBoard - 1); //clears the LSB.. cool trick!
-        }
-        
-        return moveListForBoard;
-
-    }
-    std::vector<MoveInformation> generateLegalMoves(Board boardstate, Color color){ 
-        
-        std::vector<MoveInformation> allLegalMoves;
-        std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd.clear();                                                             // is this necessary?
-        
-        if (boardstate.canKingCastle(color)){
-            // std::cout << "\n DEBUG : CASTLING IS ADDED\n";
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
-        }
-        if (boardstate.canQueenCastle(color)){
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O-O"));
-        }
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-        // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
-        //printMoveList(allLegalMoves);
-
-        //CLEANS UP PSEUDO GEN
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
-        updateNotationForMoveList(allLegalMoves);
-        return allLegalMoves;
-    }
-    std::vector<MoveInformation> generateLegalMovesOnBoard(Board boardstate, Color color){
-        std::vector<MoveInformation> allLegalMoves;
-        std::vector<MoveInformation> movesToAdd;
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKnights(color),knight,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getBishops(color),bishop,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getRooks(color),rook,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getQueens(color),queen,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getKing(color),king,color);
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
-
-        movesToAdd.clear();                                                             // is this necessary?
-        if (boardstate.canKingCastle(color)){
-            //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
-            movesToAdd.push_back(createMoveFromString(board, color, "O-O"));
-        }
-        if (boardstate.canQueenCastle(color)){
-            movesToAdd.push_back(createMoveFromString(board,color, "O-O-O"));
-        }
-        allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
-
-        pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
-        findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
-        updateNotationForMoveList(allLegalMoves);
-        return allLegalMoves;
-
-    }
-   
-    
-    void printMoveList(std::vector<MoveInformation> moveList){
-    for (int i = 0; i < moveList.size();i++){
-        std::cout << getMoveString(moveList.at(i)) << ", ";
-        
-    }
-    
-}
-
-    //CREATING MOVES
-    MoveInformation parseMove(Color playerColor)
+class MoveParser{
+    public:
+        std::string getMoveString(MoveInformation move) //creates a string from existing move characteristics
     {
-        std::string lineArg;
-        std::getline(std::cin, lineArg);
-        if (lineArg == "q") std::exit(0);
-        while (lineArg.length() <2){
-            std::cout << "Invalid input. Please try again\n";
-            std::getline(std::cin, lineArg);
-            if (lineArg == "q") std::exit(0);
+        std::stringstream ss;
+        if (move.isKingCastle) ss << "O-O";
+        if (move.isQueenCastle) ss << "O-O-O";
+        if (!(move.getPieceLetter(move.pieceType) == 'P') ){
+            if ( !move.isKingCastle && !move.isQueenCastle) ss << move.getPieceLetter(move.pieceType);
         }
-        std::string moveStr = lineArg; // will be editing this
-        
-        MoveInformation move;
-
-        move.chessNotation = lineArg;
-        // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
-        move.isCapture = moveStr.find('x') != std::string::npos;
-        move.isPromotion = moveStr.find('=') != std::string::npos;
-        move.isCheck = moveStr.find('+') != std::string::npos;
-        move.isCheckMate = moveStr.find('#') != std::string::npos;
-        move.isKingCastle = (moveStr == "O-O"); 
-        move.isQueenCastle = (moveStr == "O-O-O");
-
-        if (move.isKingCastle){
-            if (playerColor == white){
-                move.fromSquare = e1;
-                move.toSquare = g1;
-                return move;
-            }
-            else if (playerColor == black){
-                move.fromSquare = e8;
-                move.toSquare = g8;
-                return move;
-            }
-        }
-        else if (move.isQueenCastle){
-            if (playerColor == white){
-                move.fromSquare = e1;
-                move.toSquare = c1;
-                return move;
-            }
-            else if (playerColor == black){
-                move.fromSquare = e8;
-                move.toSquare = c8;
-                return move;
-            }
-        }
-        move.playerColor = playerColor;
-        move.isAmbiguous = false;
-        // std::cout << moveStr << std::endl;
-        switch (moveStr.at(0)){ //piece type               
-
-            case 'B':
-                move.pieceType = bishop;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'N':
-                move.pieceType = knight;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'R':
-                move.pieceType = rook;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'K':
-                move.pieceType = king;
-                moveStr = moveStr.substr(1);
-                break;
-            case 'Q':
-                move.pieceType = queen;
-                moveStr = moveStr.substr(1);
-                break;
-            default:
-                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') ){
-                    move.pieceType = pawn;
-                }
-                else{
-                    move.pieceType= none;
-                }
-                break;
-        }
-
-        // std::cout << moveStr << std::endl;
-
-        if (move.isCheck || move.isCheckMate)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-        }
-        // std::cout << moveStr << std::endl;
-        if (move.isPromotion)
-        {
-            switch (moveStr.at(moveStr.length() - 1) ){
-                case 'B':
-                    move.promotionPiece = bishop;
-                    break;
-                case 'N':
-                    move.promotionPiece = knight;
-                    break;
-                case 'R':
-                    move.promotionPiece = rook;
-                    break;
-                case 'Q':
-                    move.promotionPiece = queen;
-                    break;
-    
-            }
-            moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
-        }
-
-        //std::cout << moveStr << std::endl;
-        // the last thing in the move string at this point must be the "to" information
-        move.toRank = moveStr.at(moveStr.length() - 1);
-        move.toFile = moveStr.at(moveStr.length() - 2);
-        moveStr = moveStr.substr(0, moveStr.length() - 2);
-        // std::cout << moveStr << std::endl;
-        if (move.isCapture)
-        {
-            moveStr = moveStr.substr(0, moveStr.length() - 1);
-            // thing before to square, if capture is 'x'
-        }
-        // std::cout << moveStr << std::endl;
-        //std::cout << "boop";
-        if (moveStr.length() == 1) 
-        {
-            move.isAmbiguous = true;
-            if (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') move.fromFile = moveStr.at(0);
-            if (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') move.fromRank = moveStr.at(0);
             
-        }
-        if (moveStr.length() == 2){                                                     //DOUBLE AMBIGUITY CASE...UNSURE!
-            move.fromFile = moveStr.at(0); 
-            move.fromRank = moveStr.at(1);
-        }
-    
-        // std::cout << moveStr << std::endl;
-
-        // square = File * 8 + Rank
-        // a = 1
-        // rank = numbers, File == files
-        
-        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
-        move.toSquare = Square( (asciiFile - 1) + 8 * (move.toRank - '0' - 1) ); // casting both rank and file to integers and calculating the square index
-        //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
-        return move;
+        if (move.isAmbiguous){
+            if (!move.uniqueFile && move.uniqueRank) {
+                ss << move.fromRank; 
+            } 
+            else if (move.uniqueFile && !move.uniqueRank) {
+                ss << move.fromFile;
+            } 
+            else { // both are needed
+                ss << move.fromFile;
+                ss << move.fromRank;
     }
-    MoveInformation createMoveFromString(Board boardWaitingForMove, Color playerColor, std::string chessNotation){ //turn string into a move with rel attributes
+        }
+        
+        if (move.isCapture) ss << 'x';
+        
+        ss << move.toFile << move.toRank;
+        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
+
+        if (move.isCheckMate) ss << "#";  // Checkmate gets priority
+        else if (move.isCheck){
+            ss << "+";
+            //std::cout << "\nCHEESE2\n";
+        }
+        return ss.str();
+    } 
+        MoveInformation createMoveFromString(Board boardWaitingForMove, Color playerColor, std::string chessNotation){ //turn string into a move with rel attributes
         //assuming a possible chess notation (ex: NOT 1 character length)
         std::string moveStr = chessNotation; // will be editing this
         MoveInformation move;
@@ -2241,41 +1519,754 @@ public:
 
 
     }
-    std::string getMoveString(MoveInformation move) //creates a string from existing move characteristics
+        MoveInformation parseMove(Color playerColor)
     {
-        std::stringstream ss;
-        if (move.isKingCastle) ss << "O-O";
-        if (move.isQueenCastle) ss << "O-O-O";
-        if (!(move.getPieceLetter(move.pieceType) == 'P') ){
-            if ( !move.isKingCastle && !move.isQueenCastle) ss << move.getPieceLetter(move.pieceType);
+        std::string lineArg;
+        std::getline(std::cin, lineArg);
+        if (lineArg == "q") std::exit(0);
+        while (lineArg.length() <2){
+            std::cout << "Invalid input. Please try again\n";
+            std::getline(std::cin, lineArg);
+            if (lineArg == "q") std::exit(0);
+        }
+        std::string moveStr = lineArg; // will be editing this
+        
+        MoveInformation move;
+
+        move.chessNotation = lineArg;
+        // chatGPT suggested rewriting the creation of the specialty flags in this concise format.
+        move.isCapture = moveStr.find('x') != std::string::npos;
+        move.isPromotion = moveStr.find('=') != std::string::npos;
+        move.isCheck = moveStr.find('+') != std::string::npos;
+        move.isCheckMate = moveStr.find('#') != std::string::npos;
+        move.isKingCastle = (moveStr == "O-O"); 
+        move.isQueenCastle = (moveStr == "O-O-O");
+
+        if (move.isKingCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = g1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = g8;
+                return move;
+            }
+        }
+        else if (move.isQueenCastle){
+            if (playerColor == white){
+                move.fromSquare = e1;
+                move.toSquare = c1;
+                return move;
+            }
+            else if (playerColor == black){
+                move.fromSquare = e8;
+                move.toSquare = c8;
+                return move;
+            }
+        }
+        move.playerColor = playerColor;
+        move.isAmbiguous = false;
+        // std::cout << moveStr << std::endl;
+        switch (moveStr.at(0)){ //piece type               
+
+            case 'B':
+                move.pieceType = bishop;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'N':
+                move.pieceType = knight;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'R':
+                move.pieceType = rook;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'K':
+                move.pieceType = king;
+                moveStr = moveStr.substr(1);
+                break;
+            case 'Q':
+                move.pieceType = queen;
+                moveStr = moveStr.substr(1);
+                break;
+            default:
+                if ( (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') || (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') ){
+                    move.pieceType = pawn;
+                }
+                else{
+                    move.pieceType= none;
+                }
+                break;
+        }
+
+        // std::cout << moveStr << std::endl;
+
+        if (move.isCheck || move.isCheckMate)
+        {
+            moveStr = moveStr.substr(0, moveStr.length() - 1);
+        }
+        // std::cout << moveStr << std::endl;
+        if (move.isPromotion)
+        {
+            switch (moveStr.at(moveStr.length() - 1) ){
+                case 'B':
+                    move.promotionPiece = bishop;
+                    break;
+                case 'N':
+                    move.promotionPiece = knight;
+                    break;
+                case 'R':
+                    move.promotionPiece = rook;
+                    break;
+                case 'Q':
+                    move.promotionPiece = queen;
+                    break;
+    
+            }
+            moveStr = moveStr.substr(0, moveStr.length() - 2); // remove the last 2 characters because promotion = '=X' where X is piece
+        }
+
+        //std::cout << moveStr << std::endl;
+        // the last thing in the move string at this point must be the "to" information
+        move.toRank = moveStr.at(moveStr.length() - 1);
+        move.toFile = moveStr.at(moveStr.length() - 2);
+        moveStr = moveStr.substr(0, moveStr.length() - 2);
+        // std::cout << moveStr << std::endl;
+        if (move.isCapture)
+        {
+            moveStr = moveStr.substr(0, moveStr.length() - 1);
+            // thing before to square, if capture is 'x'
+        }
+        // std::cout << moveStr << std::endl;
+        //std::cout << "boop";
+        if (moveStr.length() == 1) 
+        {
+            move.isAmbiguous = true;
+            if (moveStr.at(0) >= 'a' && moveStr.at(0) <= 'h') move.fromFile = moveStr.at(0);
+            if (moveStr.at(0) >= '1' && moveStr.at(0) <= '8') move.fromRank = moveStr.at(0);
+            
+        }
+        if (moveStr.length() == 2){                                                     //DOUBLE AMBIGUITY CASE...UNSURE!
+            move.fromFile = moveStr.at(0); 
+            move.fromRank = moveStr.at(1);
+        }
+    
+        // std::cout << moveStr << std::endl;
+
+        // square = File * 8 + Rank
+        // a = 1
+        // rank = numbers, File == files
+        
+        int asciiFile = static_cast<int>(move.toFile) - 97; //SHOULD BE 97 FOR 0 INDEX SYSTEM!!!!!
+        move.toSquare = Square( (asciiFile - 1) + 8 * (move.toRank - '0' - 1) ); // casting both rank and file to integers and calculating the square index
+        //std::cout << "TESTING: " << asciiFile << ", " << (move.toRank - '0') << ", " << move.toSquare << std::endl;
+        return move;
+    }
+};
+    
+class MoveGenerator{
+
+    private:
+    /*
+        low level mask generation, used by legalMoveGen functions
+        these are called by public methods... private as no user would need direct access
+    */
+        uint64_t getKnightMask(int square){
+            /*
+                15  17
+            6         10
+                x
+            10         6
+                17  15
+            
+        up is SL, down is SR
+            */
+            uint64_t knightMoves = 0ULL;
+            uint64_t bitboard = 0ULL;
+            
+        uint64_t startingSquare = 1ULL << square;
+        bitboard |= startingSquare;
+        //step 1
+        if ( (bitboard >> 17) & (notHFile) ) knightMoves |= (bitboard >> 17);
+        if ( (bitboard >> 15) & (notAFile) ) knightMoves |= (bitboard >> 15);
+        if ( (bitboard >> 10) & (notGHFile) ) knightMoves |= (bitboard >> 10);
+        if ( (bitboard >> 6)  & (notABFile) ) knightMoves |= (bitboard >> 6);
+        
+        if ( (bitboard << 17) & (notAFile) ) knightMoves |= (bitboard << 17);
+        if ( (bitboard << 15) & (notHFile) ) knightMoves |= (bitboard << 15);
+        if ( (bitboard << 10) & (notABFile) ) knightMoves |= (bitboard << 10);
+        if ( (bitboard << 6)  & (notGHFile) ) knightMoves |= (bitboard << 6);
+            
+            return knightMoves;
+        }
+        uint64_t getPawnMask(Board boardOfInterest,int square, Color side){
+            int rank = square / 8;
+            int file = square % 8;
+            //1 = white, 0 = black
+            uint64_t possibleMoves = 0ULL;
+            uint64_t possibleCaptures = 0ULL;
+            uint64_t pawnBitBoard = 1ULL << square;
+            uint64_t friendlyPieces;
+            uint64_t enemyPieces;
+            if (side == white){ // pawns move up.. << & en Passant rank = 4
+                friendlyPieces = boardOfInterest.getPieces(white);
+                enemyPieces = boardOfInterest.getPieces(black);
+                uint64_t singlePush = ( pawnBitBoard << 8) & boardOfInterest.getEmptySquares(); 
+                uint64_t doublePush = 0ULL;
+                if (rank == 1 && singlePush) doublePush = (singlePush << 8) & boardOfInterest.getEmptySquares();
+
+                
+                // if (rank == 2 & singlePush){
+                //     doublePush = (singlePush << 8) & emptySquares;
+                // }
+                possibleMoves = singlePush | doublePush ;
+                pawnBitBoard = 1ULL << square;
+                possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & (enemyPieces | (1ULL << boardOfInterest.enPassantTargetSquare) );
+                possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & (enemyPieces | (1ULL << boardOfInterest.enPassantTargetSquare) );
+                possibleMoves |= possibleCaptures;
+            }
+            else{ //identical logic, different variable values and shifting operator
+                friendlyPieces = boardOfInterest.getPieces(black);
+                enemyPieces = boardOfInterest.getPieces(white);
+        
+                uint64_t singlePush = ( pawnBitBoard >> 8) & boardOfInterest.getEmptySquares() ; 
+                uint64_t doublePush = 0ULL;
+                if (rank == 6 && singlePush) doublePush = (singlePush >> 8) & boardOfInterest.getEmptySquares();
+                possibleMoves = singlePush | doublePush ;
+                                                                                                //DONT FORGET TO REMOVE
+                possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & (enemyPieces | (1ULL << boardOfInterest.enPassantTargetSquare) );
+                possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & (enemyPieces | (1ULL << boardOfInterest.enPassantTargetSquare) );
+                possibleMoves |= possibleCaptures;
+            }
+            
+            possibleMoves &= ~(friendlyPieces);
+            return possibleMoves;
+        
+        
+        }
+        uint64_t getKingMask(int square){
+            //prevents leftside overflow
+            uint64_t notAFile =   0xFEFEFEFEFEFEFEFEULL;
+            //prevents rightside overflow
+            uint64_t notHFile =   0x7F7F7F7F7F7F7F7FULL;
+        
+        
+            int rank = square / 8;
+            int file = square % 8;
+            uint64_t kingAttack = 0ULL;
+            
+            if ( rank > 0) kingAttack |= 1ULL << (square - 8); // down
+            if ( rank < 7) kingAttack |= 1ULL << (square + 8); // up
+            if ( file > 0) kingAttack |= 1ULL << (square - 1); // left
+            if ( file < 7) kingAttack |= 1ULL << (square + 1); // right
+        
+            if ( rank < 7 && file < 7) kingAttack |= 1ULL << (square + 9); //top right
+            if ( rank < 7 && file > 0) kingAttack |= 1ULL << (square + 7); // top left
+            if ( rank > 0 && file > 0) kingAttack |= 1ULL << (square - 9); // bot left
+            if ( rank > 0 && file < 7) kingAttack |= 1ULL << (square - 7); // bot left
+            
+        
+            return kingAttack;
+        }
+    
+        //POSSIBLE CAPTURES/MOVES
+    public:
+    MoveParser mp;
+    /*
+        piece and overall legal move generation
+    */
+
+        // BITBOARDS!!!!
+        uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){     // pawn moves cant capture...
+        
+            uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
+        
+        uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+        uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t possibleMoves = 0ULL;
+            uint64_t possibleCaptures = 0ULL;
+        
+            if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
+                uint64_t singlePush = ( pawnBitBoard << 8) & boardOfInterest.getEmptySquares() ; 
+                uint64_t doublePush = ( ( ( (0xFF00 & pawnBitBoard) << 8) & boardOfInterest.getEmptySquares() ) << 8 ) & boardOfInterest.getEmptySquares(); //checks for unmoved pawns, single pushes, pushes again
+            
+                possibleMoves = singlePush | doublePush ;
+                
+                possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
+                possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+                possibleMoves |= possibleCaptures;
+                possibleMoves &= ~(friendlyPieces); // may be redundant as possibleCaptures is anded with enemyPieces
+            }
+            else{ //identical logic, different variable values and shifting operator
+                uint64_t singlePush = ( pawnBitBoard >> 8) & boardOfInterest.getEmptySquares() ; 
+                uint64_t doublePush = ( ( ( (0x00FF000000000000ULL & pawnBitBoard) >> 8) & boardOfInterest.getEmptySquares() ) >> 8 ) & boardOfInterest.getEmptySquares(); //checks for unmoved pawns, single pushes, pushes again
+            
+                possibleMoves = singlePush | doublePush ;
+                
+                possibleCaptures |= ( (pawnBitBoard & notHFile) >> 9 ) & enemyPieces;
+                possibleCaptures |= ( (pawnBitBoard & notAFile )>> 7) & enemyPieces;
+                possibleMoves |= possibleCaptures;
+                possibleMoves &= ~(friendlyPieces);
+            }
+            return possibleMoves;
+        }
+        uint64_t possibleKnightMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
+            /*
+                15  17
+            6         10
+                x
+            10         6
+                17  15
+            
+            */
+            //seperate board for knight moves and condition checking. If 1 was used, cascading shifting would happen... bad!
+
+            uint64_t knightBitBoard = boardOfInterest.getKnights(colorOfInterest);
+            uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t bitboard = knightBitBoard;
+            uint64_t knightMoves = 0ULL;
+        
+            //will not change right now because it aint broke... but!
+            //I dont need both knightMoves and bitboard. I created these to prevent cascading shifting but by assigning results to an outside/secondary board (knightMoves), cascading is avoided
+            knightMoves |= (bitboard & notHFile) << 17;
+            knightMoves |= (bitboard & notAFile) << 15;
+            knightMoves |= (bitboard & notGHFile) << 10;
+            knightMoves |= (bitboard & notABFile) << 6;
+            knightMoves |= (bitboard & notAFile) >> 17;
+            knightMoves |= (bitboard & notHFile) >> 15; 
+            knightMoves |= (bitboard & notABFile) >> 10; 
+            knightMoves |= (bitboard & notGHFile) >> 6; 
+            knightMoves &= ~friendlyPieces;
+            return knightMoves;
+        }
+        uint64_t possibleBishopMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
+        
+            uint64_t bishopBitboard = boardOfInterest.getBishops(colorOfInterest);
+            uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+            
+
+            uint64_t bishopMoves = 0ULL;
+            for (int square = 0; square < 64; square++){ // for every bishop, calculate the attacks
+                if (isSet(bishopBitboard,square)){
+                    bishopMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
+                }
+            }
+            bishopMoves &= ~friendlyPieces;
+            return bishopMoves;
+        }
+        uint64_t possibleRookMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
+        
+            uint64_t rookBitBoard = boardOfInterest.getRooks(colorOfInterest);
+            uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t rookMoves = 0ULL;
+            for (int square = 0; square < 64; square++){ //only if the bit is set, do you calculate rook moves
+                if (isSet(rookBitBoard,square)){
+                    rookMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
+                }
+            }
+            rookMoves &= ~ friendlyPieces;
+            return rookMoves;
+        }
+        uint64_t possibleQueenMovesBitBoard(Board boardOfInterest, Color colorOfInterest){
+            
+            uint64_t queenBitBoard = boardOfInterest.getQueens(colorOfInterest);
+            uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t queenMoves = 0ULL;
+            for (int square = 0; square < 64; square++){ 
+                if (isSet(queenBitBoard,square)){
+                    queenMoves |= get_rook_attacks(square,boardOfInterest.getOccupiedSquares() );
+                    queenMoves |= get_bishop_attacks(square,boardOfInterest.getOccupiedSquares() );
+                }
+            }
+            queenMoves &= ~ friendlyPieces;
+
+            return queenMoves;
+        }
+        uint64_t possibleKingMovesBitBoard(Board boardOfInterest,Color colorOfInterest){
+
+            uint64_t kingBitBoard = boardOfInterest.getKing(colorOfInterest);
+            uint64_t friendlyPieces = boardOfInterest.getPieces(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t kingAttack = 0ULL;
+            /*
+            789
+            1K1
+            987
+            */
+            //top
+            kingAttack |= (notAFile & kingBitBoard) >> 9;
+            kingAttack |= kingBitBoard >> 8;
+            kingAttack |= (notAFile & kingBitBoard) >> 7; 
+            kingAttack |= (notHFile & kingBitBoard) >> 1;
+            //bottom
+            kingAttack |= (notHFile & kingBitBoard) << 7;
+            kingAttack |= kingBitBoard << 8;
+            kingAttack |= (notHFile & kingBitBoard) << 9;
+            kingAttack |= (notAFile & kingBitBoard) << 1;
+        
+            kingAttack &= ~friendlyPieces;
+            return (kingAttack);
         }
             
-        if (move.isAmbiguous){
-            if (!move.uniqueFile && move.uniqueRank) {
-                ss << move.fromRank; 
-            } 
-            else if (move.uniqueFile && !move.uniqueRank) {
-                ss << move.fromFile;
-            } 
-            else { // both are needed
-                ss << move.fromFile;
-                ss << move.fromRank;
-    }
+        uint64_t attackedByPawns(Board boardOfInterest,Color colorOfInterest){       
+        
+            uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
+            uint64_t enemyPieces = boardOfInterest.getPieces(!colorOfInterest);
+        
+            uint64_t possibleCaptures = 0ULL;
+        
+            if (colorOfInterest == white){ // pawns move up.. << & en Passant rank = 4
+                
+                possibleCaptures |= ( (pawnBitBoard & notHFile) << 9 ) & enemyPieces;
+                possibleCaptures |= ( (pawnBitBoard & notAFile )<< 7) & enemyPieces;
+            }
+            else{ //identical logic, different variable values and shifting operator
+                possibleCaptures |= ( (pawnBitBoard & notAFile) >> 9 ) & enemyPieces;
+                possibleCaptures |= ( (pawnBitBoard & notHFile )>> 7) & enemyPieces;
+            }
+            return possibleCaptures;
         }
         
-        if (move.isCapture) ss << 'x';
+        //MOVE GENERATION FOR USER & AI
+        std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(Board boardOfInterest, uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
+            /*
+            
+            */
+        if (bitBoard == 0ULL) return {};
+        boardOfInterest.updateFriendlyEnemy(color);
+        std::vector<MoveInformation> moveListForBoard; 
+        uint64_t possibleMask = 0ULL;
+        while (bitBoard){
+            int fromSquare = __builtin_ctzll(bitBoard);  // finds the LSB that is set to one
+            switch(pieceType){
+                case pawn:
+                    possibleMask= getPawnMask(boardOfInterest, fromSquare,color);
+                    break;
+                case knight:
+                    possibleMask = getKnightMask(fromSquare);
+                    possibleMask &= ~boardOfInterest.getFriendlyPieces();
+                    break;
+                case bishop:
+                    possibleMask = get_bishop_attacks(fromSquare,boardOfInterest.getOccupiedSquares());
+                    possibleMask &= ~boardOfInterest.getFriendlyPieces();
         
-        ss << move.toFile << move.toRank;
-        if (move.isPromotion) ss << "=" << move.getPieceLetter(move.promotionPiece);
+                    break;
+                case rook:
+                    possibleMask = get_rook_attacks(fromSquare,boardOfInterest.getOccupiedSquares());
+                    possibleMask &= ~boardOfInterest.getFriendlyPieces();
+                  
+                    break;
+                case queen:
+                    possibleMask = get_rook_attacks(fromSquare,boardOfInterest.getOccupiedSquares() ) | get_bishop_attacks(fromSquare,boardOfInterest.getOccupiedSquares());
+                    possibleMask &= ~boardOfInterest.getFriendlyPieces();
+                    break;
+                case king:
+                    possibleMask = getKingMask(fromSquare);
+                    possibleMask &= ~boardOfInterest.getFriendlyPieces();
+                    break;
+                case none:  //idealy impossible... if a bit is set, a piece must be present
+                    break;
+                
+            }
+        
+            while (possibleMask){ //for each possible destination (set bit in possible mask)
+                int destination = __builtin_ctzll(possibleMask); //iterate to the first set bit/piece on the board
 
-        if (move.isCheckMate) ss << "#";  // Checkmate gets priority
-        else if (move.isCheck){
-            ss << "+";
-            //std::cout << "\nCHEESE2\n";
+                MoveInformation legalMove;
+                legalMove.playerColor = color;                                                                              //moves are created assumed white, must reassign black
+                //generate the attributes of the move
+                legalMove.pieceType = Piece(pieceType);
+                legalMove.fromSquare = Square(fromSquare);
+                legalMove.toSquare = Square(destination);
+
+                legalMove.toFile = 'a' + (destination % 8) ;
+                legalMove.toRank = '1' + (destination / 8 );
+                //now grab information from board at the destination
+
+                //captures
+                
+            
+                if (destination == boardOfInterest.enPassantTargetSquare && pieceType == pawn && boardOfInterest.getPieceAtSquare(destination) == none){
+                    legalMove.isCapture = true;
+                    legalMove.isEnpassant = true;
+                    legalMove.capturedPiece = pawn;
+                }
+                else if (boardOfInterest.getPieceAtSquare(destination) != none){
+                    legalMove.isCapture = true;
+                    legalMove.capturedPiece = boardOfInterest.getPieceAtSquare(destination);
+                }
+                else{
+                    legalMove.isCapture = false;
+                }
+                
+                //castling
+                if (color == white) { //castling will never be generated from a bitboard. its outside the normal rules for king movement
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == g1 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e1 && legalMove.toSquare == c1 ) legalMove.isQueenCastle = true;
+                }
+                if (color == black){
+                    
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == g8 ) legalMove.isKingCastle = true;
+                    if ( legalMove.pieceType == king && legalMove.fromSquare == e8 && legalMove.toSquare == c8 ) legalMove.isQueenCastle = true;
+                }
+
+                //promotions
+                if (color == white) { 
+                    if ( pieceType == pawn && (destination >= a8 && destination <= h8) ){
+                        legalMove.isPromotion = true;
+                    }
+                }
+                else{  
+                    if ( pieceType == pawn && (destination >= a1 && destination <= h1) ){
+                        legalMove.isPromotion = true;
+                    }
+                }
+                
+                //en passant
+                if (pieceType == pawn && legalMove.isCapture && legalMove.toSquare == boardOfInterest.enPassantTargetSquare) legalMove.isEnpassant = true;
+
+                /*
+                    CHECK FOR IF IT PUTS YOUR OWN KING IN CHECK!!!
+                */
+               Board copyBoard = boardOfInterest;
+                copyBoard.makeMove(legalMove,0);
+               if ( !(copyBoard.isKingInCheck(legalMove.playerColor))){ //if the move doesnt put your own king in check
+                    //add move to list
+                    legalMove.chessNotation = mp.getMoveString(legalMove);
+                    if (legalMove.isPromotion){                               
+                        legalMove.promotionPiece = bishop;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = rook;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = queen;
+                        moveListForBoard.push_back(legalMove);
+                        legalMove.promotionPiece = knight;
+                        moveListForBoard.push_back(legalMove);
+                    }
+                    else{
+                    moveListForBoard.push_back(legalMove);
+                    }
+               }
+                        
+               
+                possibleMask &= (possibleMask - 1); //clear the bit as it is done with
+            }
+
+            bitBoard &= (bitBoard - 1); //clears the LSB.. cool trick!
         }
-        return ss.str();
-    } 
+        
+        return moveListForBoard;
+
+    }
+        std::vector<MoveInformation> generateLegalMoves(Board boardstate, Color color){ 
+            
+            std::vector<MoveInformation> allLegalMoves;
+            std::vector<MoveInformation> movesToAdd;
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getPawns(color),pawn,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getKnights(color),knight,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getBishops(color),bishop,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getRooks(color),rook,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getQueens(color),queen,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getKing(color),king,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd.clear();                                                             // is this necessary?
+            
+            if (boardstate.canKingCastle(color)){
+                // std::cout << "\n DEBUG : CASTLING IS ADDED\n";
+                movesToAdd.push_back(mp.createMoveFromString(boardstate, color, "O-O"));
+            }
+            if (boardstate.canQueenCastle(color)){
+                movesToAdd.push_back(mp.createMoveFromString(boardstate, color, "O-O-O"));
+            }
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
+            // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
+            //printMoveList(allLegalMoves);
+
+            //CLEANS UP PSEUDO GEN
+            pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
+            findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+            return allLegalMoves;
+        }
+        std::vector<MoveInformation> generateLegalMovesOnBoard(Board boardstate, Color color){
+            std::vector<MoveInformation> allLegalMoves;
+            std::vector<MoveInformation> movesToAdd;
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getPawns(color),pawn,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getKnights(color),knight,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getBishops(color),bishop,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getRooks(color),rook,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getQueens(color),queen,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate, boardstate.getKing(color),king,color);
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end());
+
+            movesToAdd.clear();
+            if (boardstate.canKingCastle(color)){
+                //std::cout << "\n DEBUG : CASTLING IS ADDED\n";
+                movesToAdd.push_back(mp.createMoveFromString(boardstate, color, "O-O"));
+            }
+            if (boardstate.canQueenCastle(color)){
+                movesToAdd.push_back(mp.createMoveFromString(boardstate,color, "O-O-O"));
+            }
+            allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
+
+            pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
+            findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
+            return allLegalMoves;
+
+        }
     
+        // HELPER/CLEANUP OF PSEUDO LEGAL MOVE GEN
+        void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
+            //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
+            //void because it will edit the list of moves directly
+            for (auto& move : legalMovesList) {
+                std::vector<MoveInformation> conflictingMovesList;
+                for (const auto& other : legalMovesList) {
+        
+                    if (&move == &other ) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
+                    if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
+                        conflictingMovesList.push_back(other);
+                    }
+                }
+                if (!conflictingMovesList.empty()){ //if conflicting moves exist (ambiguity!)
+                        move.isAmbiguous = true;
+                        bool fileSufficient = true, rankSufficient = true;
+                        
+                        for (auto& conflictingMove : conflictingMovesList){
+                            if ( (conflictingMove.fromSquare%8) == (move.fromSquare%8) ) fileSufficient = false;
+                            
+                            if ( (conflictingMove.fromSquare/8) == (move.fromSquare/8) ) rankSufficient = false;
+                        
+                        }
+                        
+
+                        //only updating one because this process will repeat when the "other" move ibecomes the "move" move
+                        if (fileSufficient) {
+                            move.fromFile = 'a' + (move.fromSquare % 8); 
+                            move.uniqueFile = true;
+                            
+                        } 
+                        if (rankSufficient) {
+                            move.fromRank = '1' + (move.fromSquare / 8); 
+                            move.uniqueRank = true;
+                        } 
+                        if (!rankSufficient && !fileSufficient) {
+                            move.fromRank = '1' + (move.fromSquare / 8); 
+                            move.fromFile = 'a' + (move.fromSquare % 8); 
+                            move.uniqueRank = true;
+                            move.uniqueFile = true;
+                        } 
+                    }
+            
+            }
+            
+        }
+        void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
+            int index = 0;
+            for (MoveInformation move: legalMovesList){
+                Board copy = board;
+                copy.makeMove(move,0);
+                if (copy.isKingInCheck(move.playerColor)){
+                    legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
+                    continue;
+                }
+                else{
+                index++;
+                }
+            }
+
+        }
+        
+
+
+};
+
+class Game
+{
+private:
+    Color playerTakingTurnColor;
+    //bool isGameOver;
+    Board board;
+    int turnCount; //index for move/board history
+    
+    
+public:
+    gameEndingCondition gameCondition;
+
+    std::vector<MoveInformation> masterMoveList; //holds all moves made (game turn - 1 = index)
+    std::vector<Board> boardStates; //holds all board states
+  
+    MoveGenerator mg;
+    MoveParser mp;
+    
+    Game(){
+        board.initializeBoard();
+        boardStates.push_back(board);
+        playerTakingTurnColor = white;
+        gameCondition = ongoing;
+        turnCount = 0;
+    }
+    //GETTER METHODS
+    Board& getBoard(){
+        return board;
+    }
+    int& getGameTurnCount(){
+        return turnCount;
+    }
+    Color& getColorOfPlayerTakingTurn(){
+        return playerTakingTurnColor;
+    }
+    //GAME/PLAYER CONDITIONS
+    //MOVE GENERATION
+    
+    //HELPER METHODS TO CLEAN UP PSEUDO MOVE GEN
+   
+    
+    void updateNotationForMoveList(std::vector<MoveInformation> &legalMovesList){
+            for (auto& moves: legalMovesList){ //update the strings of all moves after bad moves removed or info updated
+                moves.chessNotation = mp.getMoveString(moves);
+            }
+        }
+    void printMoveList(std::vector<MoveInformation> moveList){
+    for (int i = 0; i < moveList.size();i++){
+        std::cout << mp.getMoveString(moveList.at(i)) << ", ";
+        
+    }
+    
+}
+
+
     //MAKING MOVE
     MoveInformation getMatchingMove(Board boardState,const std::vector<MoveInformation>& moveList, const MoveInformation& targetMove){ //compares user move to list of legal and combines
         //printMoveList(moveList);
@@ -2309,9 +2300,9 @@ public:
     }
     void makeManualGameHalfTurn (Color turn, std::string chessNotation){ // identical to takeGameHalfTurn but move is predetermined
         MoveInformation moveBeingMade;
-        moveBeingMade = createMoveFromString(getBoard(),turn,chessNotation);
+        moveBeingMade = mp.createMoveFromString(getBoard(),turn,chessNotation);
         
-        MoveInformation matchingMove = getMatchingMove(getBoard(), generateLegalMoves(getBoard(), turn) , moveBeingMade);
+        MoveInformation matchingMove = getMatchingMove(getBoard(), mg.generateLegalMoves(getBoard(), turn) , moveBeingMade);
         getBoard().makeMove(matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
         if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
@@ -2342,7 +2333,7 @@ public:
         if (turn == white) std::cout << "W.";
         else std::cout << "B.";
         
-        std::vector<MoveInformation> possibleLegalMoves = generateLegalMoves(getBoard(), turn);
+        std::vector<MoveInformation> possibleLegalMoves = mg.generateLegalMoves(getBoard(), turn);
         identifyCheckMateMoves(possibleLegalMoves,getBoard() );
         updateNotationForMoveList(possibleLegalMoves);
         MoveInformation matchingMove; //initialized inside loop
@@ -2366,7 +2357,7 @@ public:
                 }
             }   
             // move is not too small
-            MoveInformation userInputtedMove = createMoveFromString(getBoard(),turn,userInput);
+            MoveInformation userInputtedMove = mp.createMoveFromString(getBoard(),turn,userInput);
             userInputtedMove.playerColor = turn;
             //userInputtedMove.printMoveInfo();
 
@@ -2407,7 +2398,35 @@ public:
         getBoard().displayBoardPolished();
     }
     
+    void identifyCheckMateMoves(std::vector<MoveInformation> &pseudoLegalMoves, Board boardstate){
+        //the pseudoLegalMoves vector contains all moves that are possible that do not put king in check
+
+        for (int i = 0; i < pseudoLegalMoves.size();i++){
+            Board copyBoard = boardstate;
+            Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
+            copyBoard.makeMove(pseudoLegalMoves.at(i),0);
+            if (isCheckMate(opponentColor,copyBoard)){                                                      //should not be calle
+                //copyBoard.displayBoardPolished();
+                //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
+                pseudoLegalMoves.at(i).isCheckMate = true;
+                if (pseudoLegalMoves.at(i).isCheckMate == true){
+                    pseudoLegalMoves.at(i).printMoveInfo();
+                    copyBoard.displayBoardPolished();
+                }
+                // std::cout << "\nTesting move: \n";
+                // pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
+                // std::cout << "\nBoard after move:\n";
+                // copyBoard.displayBoardPolished();
+                // std::cout << "\nOpponent legal moves:\n";
+                // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
+
+            }
+            else if (boardstate.isKingInCheck(opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
+        }
+    }
+        
     //GAME ENDING CONDITIONS
+
     bool isCheckMate(Color colorOfKing, Board boardState){
         boardState.updateFriendlyEnemy(colorOfKing);
             // std::cout << "\n[DEBUG] Checking for checkmate for " << (colorOfKing == white ? "White" : "Black") << "\n";
@@ -2424,7 +2443,7 @@ public:
         if (!boardState.isKingInCheck(colorOfKing)) return false; //if the king isnt in check, it cant be mate
         // std::cout <<"\nCheckpoint A\n";
         //std::cout << "\nDebug: checkpoint 2\n";
-        std::vector<MoveInformation> legalMoves = generateLegalMovesOnBoard(boardState, colorOfKing);
+        std::vector<MoveInformation> legalMoves = mg.generateLegalMovesOnBoard(boardState, colorOfKing);
         // dont tag checkmates. quality of moves do no matter, quantity does
         // boardState.displayBoardPolished();
     
@@ -2440,10 +2459,10 @@ public:
     bool isStaleMate(Board boardState, Color colorTakingTurn){     
         std::vector<MoveInformation> possibleMoves; 
         if (colorTakingTurn == white){
-            possibleMoves = generateLegalMoves(boardState, white);
+            possibleMoves = mg.generateLegalMoves(boardState, white);
         }
         else{
-            possibleMoves = generateLegalMoves(boardState,black);
+            possibleMoves = mg.generateLegalMoves(boardState,black);
         }
         int fiftyMoveRuleFlag = 1;
         size_t sizeOfNewMoveList = std::min(size_t(100),masterMoveList.size());

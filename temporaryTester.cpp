@@ -91,7 +91,7 @@ int main() {
         game.getGameTurnCount()++;
         Board current = game.getBoard();
         game.getBoard().updateFriendlyEnemy(white);
-        moveList = game.generateLegalMoves(game.getBoard(),white);
+        moveList = game.mg.generateLegalMoves(game.getBoard(),white);
         game.identifyCheckMateMoves(moveList,game.getBoard());
         game.updateNotationForMoveList(moveList);
         game.getBoard().printCastlingStats();
@@ -104,7 +104,7 @@ int main() {
 
         //BLACK TURN
         game.getBoard().updateFriendlyEnemy(black);
-        moveList = game.generateLegalMoves(game.getBoard(),black);
+        moveList = game.mg.generateLegalMoves(game.getBoard(),black);
         game.identifyCheckMateMoves(moveList,game.getBoard());
         game.updateNotationForMoveList(moveList);
         game.getBoard().printCastlingStats();

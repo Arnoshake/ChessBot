@@ -769,8 +769,36 @@ public:
         enPassantTargetSquare = -1;
     
     };
+    void clearBoard(){
+        whitePawns = 0ULL;
+        blackPawns = 0ULL; 
+        
+        whiteRooks = 0ULL;
+        blackRooks = 0ULL; 
+
+        whiteKnights = 0ULL; 
+        blackKnights = 0ULL;
+
+        whiteBishops = 0ULL;
+        blackBishops = 0ULL;
+
+        whiteKings = 0ULL; 
+        blackKings = 0ULL; 
+
+        whiteQueens = 0ULL;
+        blackQueens = 0ULL;
+
+        whitePieces = whitePawns | whiteBishops | whiteRooks | whiteKnights | whiteKings | whiteQueens;
+        blackPieces = blackPawns | blackBishops | blackRooks | blackKnights | blackKings | blackQueens;
+        occupiedSquares = whitePieces | blackPieces;
+        emptySquares = ~occupiedSquares;
+        sideToMove = white;
+        friendlyPieces = whitePieces;
+        enemyPieces = blackPieces;
+        enPassantTargetSquare = -1;
+    }
     //POSSIBLE CAPTURES/MOVES
-    uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){                 //NEED TO ACCOUNT FOR EN PASSANT
+    uint64_t possiblePawnMovesBitBoard(Board boardOfInterest, Color colorOfInterest){     // pawn moves cant capture...
       
         uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
     
@@ -909,8 +937,7 @@ public:
         kingAttack &= ~friendlyPieces;
         return (kingAttack);
     }
-
-    //necessary for isKingInCheck
+        //PIECE MOVE GENERATION BY SQUARE
     uint64_t attackedByPawns(Board boardOfInterest,Color colorOfInterest){       
       
         uint64_t pawnBitBoard = boardOfInterest.getPawns(colorOfInterest);
@@ -929,7 +956,6 @@ public:
         }
         return possibleCaptures;
     }
-
     uint64_t getKnightMask(int square){
         /*
             15  17
@@ -1203,164 +1229,64 @@ public:
         }
         
     } 
-    void undoMove(Board &board, MoveInformation move){                  
-        //assuming the move passed in is from the generated legal move list, NOT user data... (important for From data)
-
-        //this is ensured to be legal so responsibility of function is to only update the board
-        Color enemyColor;
-        if (move.playerColor == white){
-            enemyColor = black; 
-        }
-        if (move.playerColor == black){
-            enemyColor = white; 
-            
-        }
     
-        
-        //PROMOTIONS
-        if (move.isPromotion){
-            // undoes the actual promotion. The movement that got the pawn to be promoted will be handled in the following bools
-            board.removePiece(move.playerColor,move.promotionPiece,move.toSquare);
-            board.addPiece(move.playerColor,pawn,move.toSquare); //all promotions are pawn piece type
-           
-        }
-        //CAPTURES/ENPASSANT
-        if (move.isCapture){
-            if (move.isEnpassant){
-
-                //remove the piece at en passant square
-                board.removePiece(move.playerColor,pawn,move.toSquare); //toSquare is en Passant square
-                //add at square of origin
-                board.addPiece(move.playerColor,move.pieceType,move.fromSquare);
-                //add pawn that was passant'd (based on color (above/below) )
-                int pawnToBeAddedSquare;
-                if (enemyColor == black) pawnToBeAddedSquare = move.toSquare + 8;
-                else pawnToBeAddedSquare = move.toSquare - 8;
-
-                board.addPiece(enemyColor,pawn,pawnToBeAddedSquare);
-
-
-
-      
-                return; //enPassant cannot lead to castling, promotion, etc.
-            }
-            else{ //traditional captures
-                //remove the capturing piece
-                board.removePiece(move.playerColor,move.pieceType,move.toSquare);
-                //add the captured piece
-                board.addPiece(enemyColor,move.capturedPiece,move.toSquare);
-                //readd capturing piece @ origin
-                board.addPiece(move.playerColor,move.pieceType,move.fromSquare);
-            }
-        }
-       
-        //CASTLING
-        else if (move.isKingCastle){                                    //could be rewritten to be less explicit and more moduralized --> future update!
-            if (move.playerColor == white){
-                board.addPiece(white,king,e1);           
-                board.removePiece(white,king,g1);
-
-                board.addPiece(white,rook,h1);          
-                board.removePiece(white,rook,f1); 
-            }
-            else{
-                board.addPiece(black,king,e8);              
-                board.removePiece(black,king,g8); 
-                
-                board.addPiece(black,rook,h8);          
-                board.removePiece(black,rook,f8); 
-            }
-        }
-        else if (move.isQueenCastle){
-            if (move.playerColor == white){
-                board.addPiece(white,king,e1); // "pick it up"             
-                board.removePiece(white,king,c1); // "place it down"
-
-                board.addPiece(white,rook,a1);          
-                board.removePiece(white,rook,d1); 
-            }
-            else{
-                board.addPiece(black,king,e8);           
-                board.removePiece(black,king,c8);
-
-                board.addPiece(black,rook,a8);          
-                board.removePiece(black,rook,d8); 
-            }
-        }
-        //REGULAR MOVES (Passive/NonCapture)
-        else if (move.isCapture == 0){ 
-            board.removePiece(move.playerColor,move.pieceType,move.toSquare); 
-            board.addPiece(move.playerColor,move.pieceType,move.fromSquare); 
-        }
-        
-        
-    } 
-    bool isSquareInCheck(Board boardOfInterest, Square squareOfInterest, Color colorOfSquare){
+    bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare){
        
         Color opponentColor = !colorOfSquare;
-        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleKingMovesBitBoard(boardOfInterest,opponentColor);
+        uint64_t opponentMoves = attackedByPawns(*this, opponentColor) | possibleKnightMovesBitBoard(*this, opponentColor) | possibleBishopMovesBitBoard(*this, opponentColor) | 
+        possibleRookMovesBitBoard(*this, opponentColor) | possibleQueenMovesBitBoard(*this, opponentColor) | possibleKingMovesBitBoard(*this,opponentColor);
         //opponentMoves includes King because this asks if a square is in check, different than if king is in check
         //std::cout <<"\nCheckpoint D\n";
-        return  ( ((1ULL << squareOfInterest) & opponentMoves) != 0); //returns true on check
+        return  ( ((1ULL << squareOfInterest) & opponentMoves) != 0); 
+    }
+
+    bool isKingInCheck(Color colorOfKing){
+        
+        uint64_t kingLocation = getKing(colorOfKing);
+        Color opponentColor = !colorOfKing;
+        uint64_t opponentMoves = attackedByPawns(*this, opponentColor) | possibleKnightMovesBitBoard(*this, opponentColor) | possibleBishopMovesBitBoard(*this, opponentColor) | 
+                                    possibleRookMovesBitBoard(*this, opponentColor) | possibleQueenMovesBitBoard(*this, opponentColor);
+       
+        return  ( (kingLocation & opponentMoves) != 0); //if there is overlap (>0) return true
     }
     
-    bool canKingCastle(Board boardState, int color){ //check for if any of the 4 squares of relevance are in check... done later
+    bool canKingCastle(Color color){ //check for if any of the 4 squares of relevance are in check... done later
         
         if (color == white){
-            //std::cout << "\nDEBUG : Checking if White Can King Castle\n";
-            bool kingPos = (boardState.getPieceAtSquare(e1) == king && !isSquareInCheck(boardState,e1,white));
-            bool rookPos = (boardState.getPieceAtSquare(h1) == rook && !isSquareInCheck(boardState,h1,white));
-            bool emptySquare1 = ((boardState.getPieceAtSquare(f1) == none) && !isSquareInCheck(boardState,f1,white)) ;
-            bool emptySquare2 = (boardState.getPieceAtSquare(g1) == none && !isSquareInCheck(boardState,g1,white)) ;
+            bool kingPos = (getPieceAtSquare(e1) == king && !isSquareInCheck(e1,white));
+            bool rookPos = (getPieceAtSquare(h1) == rook && !isSquareInCheck(h1,white));
+            bool emptySquare1 = ((getPieceAtSquare(f1) == none) && !isSquareInCheck(f1,white)) ;
+            bool emptySquare2 = (getPieceAtSquare(g1) == none && !isSquareInCheck(g1,white)) ;
             bool castlePriv = whiteCastlePrivelege;
-            // std::cout << "=== White Kingside Castling Conditions ===" << std::endl;
-
-            // std::cout << "King on e1 and not in check:        " << (kingPos ? "true" : "false") << std::endl;
-            // std::cout << "Rook on h1 and not in check:        " << (rookPos ? "true" : "false") << std::endl;
-            // std::cout << "f1 is empty and not in check:       " << (emptySquare1 ? "true" : "false") << std::endl;
-            // std::cout << "g1 is empty and not in check:       " << (emptySquare2 ? "true" : "false") << std::endl;
-            // std::cout << "White has castling privilege:       " << (castlePriv ? "true" : "false") << std::endl;
-
-            // std::cout << "==========================================" << std::endl;
             
             if (kingPos && rookPos && emptySquare1 && emptySquare2 && castlePriv) return true;
         }
             
-       //std::cout << "\nDEBUG : Checking if Black Can King Castle\n";
         if (color == black){
-            bool kingPos = (boardState.getPieceAtSquare(e8) == king && !isSquareInCheck(boardState,e8,black));
-            bool rookPos = (boardState.getPieceAtSquare(h8) == rook && !isSquareInCheck(boardState,h8,black));
-            bool emptySquare1 = ((boardState.getPieceAtSquare(f8) == none) && !isSquareInCheck(boardState,f8,black)) ;
-            bool emptySquare2 = (boardState.getPieceAtSquare(g8) == none && !isSquareInCheck(boardState,g8,black)) ;
+            bool kingPos = (getPieceAtSquare(e8) == king && !isSquareInCheck(e8,black));
+            bool rookPos = (getPieceAtSquare(h8) == rook && !isSquareInCheck(h8,black));
+            bool emptySquare1 = ((getPieceAtSquare(f8) == none) && !isSquareInCheck(f8,black)) ;
+            bool emptySquare2 = (getPieceAtSquare(g8) == none && !isSquareInCheck(g8,black)) ;
             bool castlePriv = blackCastlePrivelege;
-            // std::cout << "=== Black Kingside Castling Conditions ===" << std::endl;
-
-            // std::cout << "King on e8 and not in check:        " << (kingPos ? "true" : "false") << std::endl;
-            // std::cout << "Rook on h8 and not in check:        " << (rookPos ? "true" : "false") << std::endl;
-            // std::cout << "f8 is empty and not in check:       " << (emptySquare1 ? "true" : "false") << std::endl;
-            // std::cout << "g8 is empty and not in check:       " << (emptySquare2 ? "true" : "false") << std::endl;
-            // std::cout << "Black has castling privilege:       " << (castlePriv ? "true" : "false") << std::endl;
-
-            // std::cout << "==========================================" << std::endl;
-            
+        
             if (kingPos && rookPos && emptySquare1 && emptySquare2 && castlePriv) return true;
         } 
         return false;
     }
-    bool canQueenCastle(Board boardState, int color){ //ensures piece in right location + not in check
-        if (color == white && (boardState.getPieceAtSquare(e1) == king && !isSquareInCheck(boardState,e1,white)) 
-                            && (boardState.getPieceAtSquare(a1) == rook && !isSquareInCheck(boardState,a1,white)) 
-                            && ((boardState.getPieceAtSquare(b1) == none) && !isSquareInCheck(boardState,b1,white)) 
-                            && (boardState.getPieceAtSquare(c1) == none && !isSquareInCheck(boardState,c1,white)) && whiteCastlePrivelege) return true;
-        if (color == black && (boardState.getPieceAtSquare(e8) == king && !isSquareInCheck(boardState,e8,black))
-                             && (boardState.getPieceAtSquare(a8) == rook && !isSquareInCheck(boardState,a8,black)) 
-                             && ((boardState.getPieceAtSquare(b8) == none) && !isSquareInCheck(boardState,b8,black)) 
-                             && (boardState.getPieceAtSquare(c8) == none && !isSquareInCheck(boardState,c8,black)) 
+    bool canQueenCastle(Color color){ //ensures piece in right location + not in check
+        if (color == white && (getPieceAtSquare(e1) == king && !isSquareInCheck(e1,white)) 
+                            && (getPieceAtSquare(a1) == rook && !isSquareInCheck(a1,white)) 
+                            && ((getPieceAtSquare(b1) == none) && !isSquareInCheck(b1,white)) 
+                            && (getPieceAtSquare(c1) == none && !isSquareInCheck(c1,white)) && whiteCastlePrivelege) return true;
+        if (color == black && (getPieceAtSquare(e8) == king && !isSquareInCheck(e8,black))
+                             && (getPieceAtSquare(a8) == rook && !isSquareInCheck(a8,black)) 
+                             && ((getPieceAtSquare(b8) == none) && !isSquareInCheck(b8,black)) 
+                             && (getPieceAtSquare(c8) == none && !isSquareInCheck(c8,black)) 
                              && blackCastlePrivelege) return true;
         return false;
     }
     
-    void updateCastlingRights(Board &postMoveBoardState, MoveInformation moveBeingMade, Color color){
+    void updateCastlingRights(MoveInformation moveBeingMade, Color color){ // call this function on the gameboard AFTER the move has been made
         /*
             Castling can happen if none of the rel pieces are in check and king or rook  has not moved and you havent already castled 
 
@@ -1370,72 +1296,72 @@ public:
        if (color == white){
             //handles if the move made moved needed pieces
             if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
-                postMoveBoardState.whiteHasCastled = true;
-                postMoveBoardState.whiteCanQueenCastle = false;
-                postMoveBoardState.whiteCanKingCastle = false;
-                postMoveBoardState.whiteCastlePrivelege = false;
-                postMoveBoardState.whiteKingCastleRights = false;
-                postMoveBoardState.whiteQueenCastleRights = false;
+                whiteHasCastled = true;
+                whiteCanQueenCastle = false;
+                whiteCanKingCastle = false;
+                whiteCastlePrivelege = false;
+                whiteKingCastleRights = false;
+                whiteQueenCastleRights = false;
                 return;
             }
             if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
                     if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling                //ADD CONDITION THAT It ORIGINATES (pawn promotion can fuck this)
-                        if (moveBeingMade.fromSquare % 8 == 7) postMoveBoardState.whiteKingCastleRights = false;
-                        if (moveBeingMade.fromSquare % 8 == 0) postMoveBoardState.whiteQueenCastleRights = false;
+                        if (moveBeingMade.fromSquare % 8 == 7) whiteKingCastleRights = false;
+                        if (moveBeingMade.fromSquare % 8 == 0) whiteQueenCastleRights = false;
                     }
                     if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
-                        postMoveBoardState.whiteHasCastled = false;
-                        postMoveBoardState.whiteCanQueenCastle = false;
-                        postMoveBoardState.whiteCanKingCastle = false;
-                        postMoveBoardState.whiteCastlePrivelege = false;
-                        postMoveBoardState.whiteKingCastleRights = false;
-                        postMoveBoardState.whiteQueenCastleRights = false;
+                        whiteHasCastled = false;
+                        whiteCanQueenCastle = false;
+                        whiteCanKingCastle = false;
+                        whiteCastlePrivelege = false;
+                        whiteKingCastleRights = false;
+                        whiteQueenCastleRights = false;
                     }
             }
             //handles the post move boardstate. Are pieces in location and has castling been maintained previously?
-            if (canKingCastle(postMoveBoardState,white)){
-                postMoveBoardState.whiteCanKingCastle = true;
+            if (canKingCastle(white)){
+                whiteCanKingCastle = true;
             }
-            if (canQueenCastle(postMoveBoardState,white)){
-                postMoveBoardState.whiteCanQueenCastle = true;
+            if (canQueenCastle(white)){
+                whiteCanQueenCastle = true;
             }
 
             //postMoveBoardState.whiteQueenCastleRights = canQueenCastle(postMoveBoardState,white);
         }
         else{//black
             if (moveBeingMade.isKingCastle || moveBeingMade.isQueenCastle){
-                postMoveBoardState.blackHasCastled = true;
-                postMoveBoardState.blackCanQueenCastle = false;
-                postMoveBoardState.blackCanKingCastle = false;
-                postMoveBoardState.blackCastlePrivelege = false;
-                postMoveBoardState.blackKingCastleRights = false;
-                postMoveBoardState.blackQueenCastleRights = false;
+                blackHasCastled = true;
+                blackCanQueenCastle = false;
+                blackCanKingCastle = false;
+                blackCastlePrivelege = false;
+                blackKingCastleRights = false;
+                blackQueenCastleRights = false;
                 return;
             }
             //handles if the move made moved needed pieces
             if ((moveBeingMade.pieceType == rook || moveBeingMade.pieceType == king )){
                     // a move is made that involves one of the pieces that is not a castle
                     if (moveBeingMade.pieceType == rook ){ //whichever rook moved voids that side's castling
-                        if (moveBeingMade.fromSquare % 8 == 7) postMoveBoardState.blackKingCastleRights = false;
-                        if (moveBeingMade.fromSquare % 8 == 0) postMoveBoardState.blackQueenCastleRights = false;
+                        if (moveBeingMade.fromSquare % 8 == 7) blackKingCastleRights = false;
+                        if (moveBeingMade.fromSquare % 8 == 0) blackQueenCastleRights = false;
 
                     }
                     if (moveBeingMade.pieceType == king){ //any king movement voids castling on the new board state
-                        postMoveBoardState.blackHasCastled = false;
-                        postMoveBoardState.blackCanQueenCastle = false;
-                        postMoveBoardState.blackCanKingCastle = false;
-                        postMoveBoardState.blackCastlePrivelege = false;
-                        postMoveBoardState.blackKingCastleRights = false;
-                        postMoveBoardState.blackQueenCastleRights = false;
+                        blackHasCastled = false;
+                        blackCanQueenCastle = false;
+                        blackCanKingCastle = false;
+                        blackCastlePrivelege = false;
+                        blackKingCastleRights = false;
+                        blackQueenCastleRights = false;
                     }
             }
             //handles the post move boardstate. Are pieces in location and has castling been maintained previously?
-            if (canKingCastle(postMoveBoardState,black)){
-                postMoveBoardState.blackCanKingCastle = true;
+            if (canKingCastle(black)){
+                blackCanKingCastle = true;
             }
-            if (canQueenCastle(postMoveBoardState,black)){
-                postMoveBoardState.blackCanQueenCastle = true;
+            if (canQueenCastle(black)){
+                blackCanQueenCastle = true;
             }
            
         }
@@ -1587,7 +1513,7 @@ std::string getPieceSymbol(Piece piece, Color color) {
     }
 }
 
-Color getColorAtSquare(int square) const {
+Color getColorAtSquare(int square) const {                  // POTENTIAL BUG LATER ON IF CALLED ON AN EMPTY SQUARE
     uint64_t mask = 1ULL << square;
     
     if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKings) & mask)
@@ -1660,6 +1586,102 @@ public:
     }
     //GAME/PLAYER CONDITIONS
     //MOVE GENERATION
+    
+    //HELPER METHODS TO CLEAN UP PSEUDO MOVE GEN
+    void identifyCheckMateMoves(std::vector<MoveInformation> &pseudoLegalMoves, Board boardstate){
+        //the pseudoLegalMoves vector contains all moves that are possible that do not put king in check
+
+        for (int i = 0; i < pseudoLegalMoves.size();i++){
+            Board copyBoard = boardstate;
+            Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
+            copyBoard.makeMove(copyBoard,pseudoLegalMoves.at(i),0);
+            if (isCheckMate(opponentColor,copyBoard)){
+                //copyBoard.displayBoardPolished();
+                //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
+                pseudoLegalMoves.at(i).isCheckMate = true;
+                if (pseudoLegalMoves.at(i).isCheckMate == true){
+                    pseudoLegalMoves.at(i).printMoveInfo();
+                    copyBoard.displayBoardPolished();
+                    std::vector<MoveInformation> debugger = generateLegalMoves(copyBoard,opponentColor);
+                    printMoveList(debugger);
+                }
+                // std::cout << "\nTesting move: \n";
+                // pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
+                // std::cout << "\nBoard after move:\n";
+                // copyBoard.displayBoardPolished();
+                // std::cout << "\nOpponent legal moves:\n";
+                // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
+
+            }
+            else if (isKingInCheck( copyBoard , opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
+        }
+    }
+    void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
+        //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
+        //void because it will edit the list of moves directly
+        for (auto& move : legalMovesList) {
+            std::vector<MoveInformation> conflictingMovesList;
+            for (const auto& other : legalMovesList) {
+    
+                if (&move == &other ) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
+                if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
+                    conflictingMovesList.push_back(other);
+                }
+            }
+            if (!conflictingMovesList.empty()){ //if conflicting moves exist (ambiguity!)
+                    move.isAmbiguous = true;
+                    bool fileSufficient = true, rankSufficient = true;
+                    
+                    for (auto& conflictingMove : conflictingMovesList){
+                        if ( (conflictingMove.fromSquare%8) == (move.fromSquare%8) ) fileSufficient = false;
+                        
+                        if ( (conflictingMove.fromSquare/8) == (move.fromSquare/8) ) rankSufficient = false;
+                    
+                    }
+                    
+
+                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
+                    if (fileSufficient) {
+                        move.fromFile = 'a' + (move.fromSquare % 8); 
+                        move.uniqueFile = true;
+                        
+                    } 
+                    if (rankSufficient) {
+                        move.fromRank = '1' + (move.fromSquare / 8); 
+                        move.uniqueRank = true;
+                    } 
+                    if (!rankSufficient && !fileSufficient) {
+                        move.fromRank = '1' + (move.fromSquare / 8); 
+                        move.fromFile = 'a' + (move.fromSquare % 8); 
+                        move.uniqueRank = true;
+                        move.uniqueFile = true;
+                    } 
+                }
+           
+        }
+        
+    }
+    void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
+        int index = 0;
+        for (MoveInformation move: legalMovesList){
+            Board copy = board;
+            copy.makeMove(copy,move,0);
+            if (isKingInCheck(copy,move.playerColor)){
+                legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
+                continue;
+            }
+            else{
+            index++;
+            }
+        }
+
+    }
+    void updateNotationForMoveList(std::vector<MoveInformation> &legalMovesList){
+        for (auto& moves: legalMovesList){ //update the strings of all moves after bad moves removed or info updated
+            moves.chessNotation = getMoveString(moves);
+        }
+    }
+
     std::vector<MoveInformation> generatePseudoLegalMovesFromBitboard(uint64_t bitBoard, Piece pieceType, Color color){ //color may be passed implicitly by game variable
         if (bitBoard == 0ULL) return {};
         board.updateFriendlyEnemy(color);
@@ -1787,75 +1809,8 @@ public:
         return moveListForBoard;
 
     }
-    void identifyCheckMateMoves(std::vector<MoveInformation> &pseudoLegalMoves, Board boardstate){
-        //the pseudoLegalMoves vector contains all moves that are possible that do not put king in check
-
-        for (int i = 0; i < pseudoLegalMoves.size();i++){
-            Board copyBoard = boardstate;
-            Color opponentColor = !(pseudoLegalMoves.at(i).playerColor);
-            copyBoard.makeMove(copyBoard,pseudoLegalMoves.at(i),0);
-            if (isCheckMate(opponentColor,copyBoard)){
-                //copyBoard.displayBoardPolished();
-                //std::cout<<"\nDebug: A MOVE IS CHECKMATE!\n";
-                pseudoLegalMoves.at(i).isCheckMate = true;
-                // std::cout << "\nTesting move: \n";
-                // pseudoLegalMoves.at(i).printMoveInfo(); // Your helper
-                // std::cout << "\nBoard after move:\n";
-                // copyBoard.displayBoardPolished();
-                // std::cout << "\nOpponent legal moves:\n";
-                // printMoveList(generateLegalMovesOnBoardNoCheckTags(copyBoard, opponentColor));
-
-            }
-            else if (isKingInCheck( copyBoard , opponentColor) ) pseudoLegalMoves.at(i).isCheck = true;//not checkmate but could be checkmate
-        }
-    }
-        
-    void findAmbiguousMoves(std::vector<MoveInformation> &legalMovesList){ //edits list of legal moves to show ambiguity
-        //std::vector<MoveInformation> copyofLegalMoves = legalMovesList;
-        //void because it will edit the list of moves directly
-        for (auto& move : legalMovesList) {
-            std::vector<MoveInformation> conflictingMovesList;
-            for (const auto& other : legalMovesList) {
-    
-                if (&move == &other ) continue; //prevents self-comparison, if something is already marked ambiguous, skip it!
-                if (move.pieceType == other.pieceType && move.playerColor == other.playerColor && move.toSquare == other.toSquare && move.fromSquare != other.fromSquare) {
-                    conflictingMovesList.push_back(other);
-                }
-            }
-            if (!conflictingMovesList.empty()){ //if conflicting moves exist (ambiguity!)
-                    move.isAmbiguous = true;
-                    bool fileSufficient = true, rankSufficient = true;
-                    
-                    for (auto& conflictingMove : conflictingMovesList){
-                        if ( (conflictingMove.fromSquare%8) == (move.fromSquare%8) ) fileSufficient = false;
-                        
-                        if ( (conflictingMove.fromSquare/8) == (move.fromSquare/8) ) rankSufficient = false;
-                    
-                    }
-                    
-
-                    //only updating one because this process will repeat when the "other" move ibecomes the "move" move
-                    if (fileSufficient) {
-                        move.fromFile = 'a' + (move.fromSquare % 8); 
-                        move.uniqueFile = true;
-                        
-                    } 
-                    if (rankSufficient) {
-                        move.fromRank = '1' + (move.fromSquare / 8); 
-                        move.uniqueRank = true;
-                    } 
-                    if (!rankSufficient && !fileSufficient) {
-                        move.fromRank = '1' + (move.fromSquare / 8); 
-                        move.fromFile = 'a' + (move.fromSquare % 8); 
-                        move.uniqueRank = true;
-                        move.uniqueFile = true;
-                    } 
-                }
-           
-        }
-        
-    }
     std::vector<MoveInformation> generateLegalMoves(Board boardstate, Color color){ 
+        
         std::vector<MoveInformation> allLegalMoves;
         std::vector<MoveInformation> movesToAdd;
         movesToAdd = generatePseudoLegalMovesFromBitboard(boardstate.getPawns(color),pawn,color);
@@ -1888,18 +1843,12 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
         // std::cout << "\nDEBUG : MOVES BEFORE IDENTIFY MATES AND AMBIG MOVES\n";
         //printMoveList(allLegalMoves);
+
+        //CLEANS UP PSEUDO GEN
         pruneMovesThatKeepSelfInCheck(allLegalMoves,board);
-        //identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to possible moves
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
-        for (auto& moves: allLegalMoves){ //update the strings of all moves after bad moves removed or info updated
-            moves.chessNotation = getMoveString(moves);
-        }
+        updateNotationForMoveList(allLegalMoves);
         return allLegalMoves;
-    }
-    void updateNotationForMoveList(std::vector<MoveInformation> &legalMovesList){
-        for (auto& moves: legalMovesList){ //update the strings of all moves after bad moves removed or info updated
-            moves.chessNotation = getMoveString(moves);
-        }
     }
     std::vector<MoveInformation> generateLegalMovesOnBoard(Board boardstate, Color color){
         std::vector<MoveInformation> allLegalMoves;
@@ -1933,28 +1882,12 @@ public:
         allLegalMoves.insert(allLegalMoves.end(), movesToAdd.begin(), movesToAdd.end()); // adding possible castles
 
         pruneMovesThatKeepSelfInCheck(allLegalMoves,boardstate);
-        // identifyCheckMateMoves(allLegalMoves,boardstate); //ammends check or mate to moves
         findAmbiguousMoves(allLegalMoves); //updates notation of moves that are ambig
-
+        updateNotationForMoveList(allLegalMoves);
         return allLegalMoves;
 
     }
    
-    void pruneMovesThatKeepSelfInCheck(std::vector<MoveInformation> &legalMovesList, Board board){
-        int index = 0;
-        for (MoveInformation move: legalMovesList){
-            Board copy = board;
-            copy.makeMove(copy,move,0);
-            if (isKingInCheck(copy,move.playerColor)){
-                legalMovesList.erase(legalMovesList.begin() + index); //removes any moves where your own king is still in check
-                continue;
-            }
-            else{
-            index++;
-            }
-        }
-
-    }
     
     void printMoveList(std::vector<MoveInformation> moveList){
     for (int i = 0; i < moveList.size();i++){
@@ -2433,16 +2366,18 @@ public:
     }
     
     //GAME ENDING CONDITIONS
-    bool isKingInCheck(Board boardOfInterest, Color colorOfKing){
-        //is the king of SIDE's color in check?
-        //std::cout <<"\nCheckpoint C\n";
-        uint64_t kingLocation = boardOfInterest.getKing(colorOfKing);
-        Color opponentColor = !colorOfKing;
-        uint64_t opponentMoves = boardOfInterest.attackedByPawns(boardOfInterest, opponentColor) | boardOfInterest.possibleKnightMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleBishopMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleRookMovesBitBoard(boardOfInterest, opponentColor) | boardOfInterest.possibleQueenMovesBitBoard(boardOfInterest, opponentColor);
-        //std::cout <<"\nCheckpoint D\n";
-        return  ( (kingLocation & opponentMoves) != 0); //returns true on check
-    }
     bool isCheckMate(Color colorOfKing, Board boardState){
+        boardState.updateFriendlyEnemy(colorOfKing);
+            // std::cout << "\n[DEBUG] Checking for checkmate for " << (colorOfKing == white ? "White" : "Black") << "\n";
+            // std::vector<MoveInformation> legalMovesTest = generateLegalMoves(board, colorOfKing);
+            // std::cout << "[DEBUG] Legal moves found: " << legalMovesTest.size() << "\n";
+
+            // for (auto& move : legalMovesTest) {
+            //     move.printMoveInfo();
+            // }
+
+            // std::cout << "[DEBUG] King is " << (isKingInCheck(boardState,colorOfKing) ? "" : "not ") << "in check.\n";
+
         //std::cout << "\nDebug: checking for checkmate!\n";
         if (!isKingInCheck(boardState,colorOfKing)) return false; //if the king isnt in check, it cant be mate
         // std::cout <<"\nCheckpoint A\n";
@@ -2453,7 +2388,7 @@ public:
     
         std::cout <<"\nLegal Moves:";
         printMoveList(legalMoves);
-        // std::cout <<"\n";
+         std::cout <<"  -> " << legalMoves.size();
        //  std::cout <<"\nCheckpoint B\n";
        //std::cout << "\nDebug: checkpoint 3: " << legalMoves.empty() << std::endl;
        //printMoveList(legalMoves);

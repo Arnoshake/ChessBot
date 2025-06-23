@@ -104,10 +104,13 @@ class Board{
 
     uint64_t getKing(Color colorOfInterest) const;
     uint64_t setKing(uint64_t newBitBoard, Color colorOfInterest);
-    
+    Piece getPieceAtSquare(Square square) const;
+    Color Board::getColorAtSquare(Square square) const;
+
     bool operator==(const Board& other) const;
     
 
     void addPiece(Color color,Piece piece, Square square);
     void removePiece(Color color, Piece piece, Square square);
+    void Board::movePiece(Square from, Square to);
 };

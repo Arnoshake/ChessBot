@@ -479,7 +479,32 @@ uint64_t Board::setKing(uint64_t newBitBoard, Color colorOfInterest)
         }
     }
 }
+Piece Board::getPieceAtSquare(Square square) const{
+        if ( (blackPawns | whitePawns ) & (1ULL << square) ) return pawn;
+        if ( (blackKnights | whiteKnights ) & (1ULL << square) ) return knight;
+        if ( (blackBishops | whiteBishops ) & (1ULL << square) ) return bishop;
+        if ( (blackRooks | whiteRooks ) & (1ULL << square) ) return rook;
+        if ( (blackQueens | whiteQueens ) & (1ULL << square) ) return queen;
+        if ( (blackKings | whiteKings ) & (1ULL << square) ) return king;
+        return NO_PIECE;
+    }
+Color Board::getColorAtSquare(Square square) const {                  
+    uint64_t mask = 1ULL << square;
+    
+    if ((whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKings) & mask){
+        return white;
+    }
+        
 
+    else if ((blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKings) & mask){
+        return black;
+    }
+    else{
+        return NO_COLOR;
+    }
+        
+    //will not return because this function will only be called on squares with pieces
+}
 bool Board::operator==(const Board &other) const
 {
     return occupiedSquares == other.occupiedSquares &&
@@ -589,4 +614,28 @@ void Board::removePiece(Color color, Piece piece, Square square){ //only differe
             updatePiecesOfSide(color);
             updateOccupiedSquares();
             updateEmptySquares();
-    }  
+} 
+void Board::movePiece(Square from, Square to){
+    
+        Board &currentBoardState = *this; //currentBoardState acts as an alias to this. Done for readability/simplicitiy
+
+        Piece pieceBeingMoved = currentBoardState.getPieceAtSquare(from);
+        if (pieceBeingMoved == NO_PIECE){
+            std::cerr << "movePiece was called on a square without a piece";
+            exit(1);
+        }
+        else{
+            Color colorOfPieceBeingMoved = currentBoardState.getColorAtSquare(from);
+            if (colorOfPieceBeingMoved == NO_COLOR){
+            std::cerr << "movePiece was called on a square without a piece";
+            exit(1);
+            }
+            else{
+                currentBoardState.removePiece(colorOfPieceBeingMoved , pieceBeingMoved , from);
+                currentBoardState.addPiece(colorOfPieceBeingMoved , pieceBeingMoved , to);
+
+            }
+            
+        }
+        
+    }

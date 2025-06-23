@@ -109,4 +109,5 @@ class Board{
     
 
     void addPiece(Color color,Piece piece, Square square);
+    void removePiece(Color color, Piece piece, Square square);
 };

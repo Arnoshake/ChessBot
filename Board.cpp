@@ -501,6 +501,10 @@ bool Board::operator==(const Board &other) const
 // Manipulating Board
 
 void Board::addPiece(Color color,Piece piece, Square square){
+    if (color == NO_COLOR || piece == NO_PIECE || square == NO_SQUARE){
+        std::cerr << "addPiece was called with a fault parameter (NO_COLOR, NO_PIECE, or NO_SQUARE)";
+        exit(1);
+    }
             switch(piece){
                 case pawn:
                     //getPawns is constant and set_bit is by reference so buffer variable required
@@ -541,4 +545,48 @@ void Board::addPiece(Color color,Piece piece, Square square){
             updateOccupiedSquares();
             updateEmptySquares();
     }
-    
+void Board::removePiece(Color color, Piece piece, Square square){ //only difference to addPiece is that it resetBit instead of setBit
+    if (color == NO_COLOR || piece == NO_PIECE || square == NO_SQUARE){
+        std::cerr << "removePiece was called with a fault parameter (NO_COLOR, NO_PIECE, or NO_SQUARE)";
+        exit(1);
+    }
+            switch(piece){
+                case pawn:
+                    //getPawns is constant and set_bit is by reference so buffer variable required
+                    uint64_t pawnBitBoard = getPawns(color);
+                    reset_bit(pawnBitBoard,square);
+                    setPawns(pawnBitBoard,color);
+                    break;
+                case bishop:
+                    uint64_t bishopBitBoard = getBishops(color);
+                    reset_bit(bishopBitBoard,square);
+                    setBishops(bishopBitBoard,color);
+                    break;
+                case knight:
+                    uint64_t knightBitBoard = getKnights(color);
+                    reset_bit(knightBitBoard,square);
+                    setKnights(knightBitBoard,color);
+                    break;
+                case rook:
+                    uint64_t rookBitBoard = getRooks(color);
+                    reset_bit(rookBitBoard,square);
+                    setRooks(rookBitBoard,color);
+                    break;
+                case queen:
+                    uint64_t queenBitBoard = getQueens(color);
+                    reset_bit(queenBitBoard,square);
+                    setQueens(queenBitBoard,color);
+                    break;
+                case king:
+                    uint64_t kingBitBoard = getKing(color);
+                    reset_bit(kingBitBoard,square);
+                    setKing(kingBitBoard,color);
+                    break;
+                case NO_PIECE:
+                default:
+                    break;
+            }
+            updatePiecesOfSide(color);
+            updateOccupiedSquares();
+            updateEmptySquares();
+    }  

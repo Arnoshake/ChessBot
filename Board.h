@@ -1,6 +1,6 @@
 #include <cstdint> //uint64_t
 enum Color{
-    white, black, noColor
+    white, black, NO_COLOR
 };
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
@@ -14,7 +14,7 @@ enum Square {
     NO_SQUARE = -1
 };
 enum Piece {
-    pawn, bishop, knight, rook, queen, king, noPiece
+    pawn, bishop, knight, rook, queen, king, NO_PIECE
 };
 class Board{
     private:
@@ -42,6 +42,11 @@ class Board{
 
     uint64_t friendlyPieces;
     uint64_t enemyPieces;
+
+    Square whiteKingSquare;
+    Square blackKingSquare;
+
+
     // 1= white, -1 = black
     bool whiteCastlePrivelege; //tracks over all ability to castle
     bool whiteKingCastleRights; //potential to castle king side
@@ -59,6 +64,10 @@ class Board{
 
 
     public:
+    void set_bit(uint64_t& bitboard, int square);
+    void reset_bit(uint64_t& bitboard, int square); //different than pop bit, used for rooks/magic
+    
+    Board();
     bool DoesSquareHavePiecePieceOfColor(Piece pieceOfInterest, Color colorOfInterest, Square square) const;
     bool isPiece(Color colorOfInterest, Square square) const;
     bool isPawn(Color colorOfInterest,Square square) const;
@@ -70,13 +79,13 @@ class Board{
     bool isOccupied(Square square) const;
 
     uint64_t getOccupiedSquares() const;
-    uint64_t setOccupiedSquares(uint64_t occupiedBitBoard);
+    uint64_t updateOccupiedSquares();
 
     uint64_t getEmptySquares() const;
-    uint64_t setEmptySquares(uint64_t emptySquaresBitBoard);
+    uint64_t updateEmptySquares();
 
     uint64_t getPiecesOfSide(Color colorOfInterest) const;
-    uint64_t setPiecesOfSide(uint64_t newBitBoard, Color colorOfInterest);
+    uint64_t updatePiecesOfSide(Color colorOfInterest);
 
     uint64_t getPawns(Color colorOfInterest) const;
     uint64_t setPawns(uint64_t newBitBoard, Color colorOfInterest);
@@ -96,5 +105,8 @@ class Board{
     uint64_t getKing(Color colorOfInterest) const;
     uint64_t setKing(uint64_t newBitBoard, Color colorOfInterest);
     
+    bool operator==(const Board& other) const;
     
+
+    void addPiece(Color color,Piece piece, Square square);
 };

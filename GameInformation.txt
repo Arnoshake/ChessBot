@@ -1,19 +1,6 @@
 MOVES MADE THIS GAME:
 
 1. e4 , e5
-2. Qf3 , Qf6
-3. g3 , Bc5
-4. Nh3 , Qxf3
-5. Ng5 , Qxh1
-6. Ke2 , f6
-7. Nf3 , Nh6
-8. Nc3 , O-O
-9. Nd5 , a5
-10. Ne7+ , Kf7
-11. Nxc8 , Rxc8
-12. b3 , Ng4
-13. Bb2 , Nxh2
-14. Bh3 , Qxf3+
-15. Ke1 , Qxf2+
-16. Kd1 , Nf1
-17. Bd4 , Qxd2+
+2. Qh5 , Nc6
+3. Bc4 , Nf6
+4. Qxf7#

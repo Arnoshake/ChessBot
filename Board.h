@@ -2,6 +2,13 @@
 enum Color{
     white, black, NO_COLOR
 };
+inline Color operator!(Color c) { 
+    if (c == white) return black;
+    else if (c == black) return white;
+    else return NO_COLOR;
+    
+}
+
 enum Square {
     a1 = 0,  b1,  c1,  d1,  e1,  f1,  g1,  h1,
     a2 = 8,  b2,  c2,  d2,  e2,  f2,  g2,  h2,
@@ -43,8 +50,7 @@ class Board{
     uint64_t friendlyPieces;
     uint64_t enemyPieces;
 
-    Square whiteKingSquare;
-    Square blackKingSquare;
+    
 
 
     // 1= white, -1 = black
@@ -64,8 +70,9 @@ class Board{
 
 
     public:
-    void set_bit(uint64_t& bitboard, int square);
-    void reset_bit(uint64_t& bitboard, int square); //different than pop bit, used for rooks/magic
+    bool isSet(uint64_t bitboard, Square square);
+    void set_bit(uint64_t& bitboard, Square square);
+    void reset_bit(uint64_t& bitboard, Square square); //different than pop bit, used for rooks/magic
     
     Board();
     bool DoesSquareHavePiecePieceOfColor(Piece pieceOfInterest, Color colorOfInterest, Square square) const;
@@ -79,31 +86,38 @@ class Board{
     bool isOccupied(Square square) const;
 
     uint64_t getOccupiedSquares() const;
-    uint64_t updateOccupiedSquares();
+    void updateOccupiedSquares();
 
     uint64_t getEmptySquares() const;
-    uint64_t updateEmptySquares();
+    void updateEmptySquares();
 
     uint64_t getPiecesOfSide(Color colorOfInterest) const;
-    uint64_t updatePiecesOfSide(Color colorOfInterest);
+    void updatePiecesOfSide(Color colorOfInterest);
+
+    uint64_t getFriendlyPieces() const;
+    void setFriendlyPieces(Color colorOfInterest);
+    uint64_t getEnemyPieces() const;
+    void setEnemyPieces(Color colorOfInterest);
+    void Board::updateFriendlyEnemy(Color color);
 
     uint64_t getPawns(Color colorOfInterest) const;
-    uint64_t setPawns(uint64_t newBitBoard, Color colorOfInterest);
+    void setPawns(uint64_t newBitBoard, Color colorOfInterest);
 
     uint64_t getKnights(Color colorOfInterest) const;
-    uint64_t setKnights(uint64_t newBitBoard, Color colorOfInterest);
+    void setKnights(uint64_t newBitBoard, Color colorOfInterest);
 
     uint64_t getBishops(Color colorOfInterest) const;
-    uint64_t setBishops(uint64_t newBitBoard, Color colorOfInterest);
+    void setBishops(uint64_t newBitBoard, Color colorOfInterest);
 
     uint64_t getRooks(Color colorOfInterest) const;
-    uint64_t setRooks(uint64_t newBitBoard, Color colorOfInterest);
+    void setRooks(uint64_t newBitBoard, Color colorOfInterest);
 
     uint64_t getQueens(Color colorOfInterest) const;
-    uint64_t setQueens(uint64_t newBitBoard, Color colorOfInterest);
+    void setQueens(uint64_t newBitBoard, Color colorOfInterest);
 
     uint64_t getKing(Color colorOfInterest) const;
-    uint64_t setKing(uint64_t newBitBoard, Color colorOfInterest);
+    void setKing(uint64_t newBitBoard, Color colorOfInterest);
+
     Piece getPieceAtSquare(Square square) const;
     Color Board::getColorAtSquare(Square square) const;
 

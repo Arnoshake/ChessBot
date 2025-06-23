@@ -4,10 +4,17 @@
 #include <cstdint> //uint64_t
 #include <cstdlib> // for exit()
 //BIT OPERATIONS
-void Board::set_bit(uint64_t& bitboard, int square){
+bool Board::isSet(uint64_t bitboard, Square square){
+    if(square < 0 || square >= 64){
+        std::cerr << "isSet was passed an invalid square parameter";
+        exit(1);
+    }
+    return (bitboard & (1ULL << square) ) != 0 ;
+}
+void Board::set_bit(uint64_t& bitboard, Square square){
     bitboard |= (1ULL << square);
 }
-void Board::reset_bit(uint64_t& bitboard, int square){
+void Board::reset_bit(uint64_t& bitboard, Square square){
     bitboard &= ~(1ULL << square);
 }
 //CONSTRUCTOR
@@ -195,7 +202,7 @@ uint64_t Board::getOccupiedSquares() const
 {
     return occupiedSquares;
 }
-uint64_t Board::updateOccupiedSquares()
+void Board::updateOccupiedSquares()
 {
     occupiedSquares = getPiecesOfSide(white) | getPiecesOfSide(black);
 }
@@ -204,7 +211,7 @@ uint64_t Board::getEmptySquares() const
 {
     return emptySquares;
 }
-uint64_t Board::updateEmptySquares()
+void Board::updateEmptySquares()
 {
     emptySquares = !getOccupiedSquares();
 }
@@ -228,7 +235,7 @@ uint64_t Board::getPiecesOfSide(Color colorOfInterest) const
             }
         }
 }
-uint64_t Board::updatePiecesOfSide(Color colorOfInterest) //piecesOfSide is a sum of the other, tracked boards
+void Board::updatePiecesOfSide(Color colorOfInterest) //piecesOfSide is a sum of the other, tracked boards
 {
         if (colorOfInterest == NO_COLOR)
         {
@@ -248,6 +255,37 @@ uint64_t Board::updatePiecesOfSide(Color colorOfInterest) //piecesOfSide is a su
         }
 }
 
+uint64_t Board::getFriendlyPieces() const{
+    return friendlyPieces;
+}
+void Board::setFriendlyPieces(Color colorOfInterest){
+    if (colorOfInterest ==NO_COLOR){
+        std::cerr << "setFriendlyPieces was passed NO_COLOR as a parameter";
+        exit(1);
+    }
+    else{
+        friendlyPieces = getPiecesOfSide(colorOfInterest);
+    }
+}
+
+uint64_t Board::getEnemyPieces() const{
+    return enemyPieces;
+}
+void Board::setEnemyPieces(Color colorOfInterest){
+    if (colorOfInterest ==NO_COLOR){
+        std::cerr << "setEnemyPieces was passed NO_COLOR as a parameter";
+        exit(1);
+    }
+    else{
+        enemyPieces = getPiecesOfSide(!colorOfInterest);
+    }
+
+}
+
+void Board::updateFriendlyEnemy(Color color){
+    setFriendlyPieces(color);
+    setEnemyPieces(color);
+}
 uint64_t Board::getPawns(Color colorOfInterest) const
 {
     if (colorOfInterest == NO_COLOR)
@@ -267,7 +305,7 @@ uint64_t Board::getPawns(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setPawns(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setPawns(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -306,7 +344,7 @@ uint64_t Board::getKnights(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setKnights(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setKnights(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -345,7 +383,7 @@ uint64_t Board::getBishops(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setBishops(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setBishops(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -383,7 +421,7 @@ uint64_t Board::getRooks(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setRooks(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setRooks(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -422,7 +460,7 @@ uint64_t Board::getQueens(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setQueens(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setQueens(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -460,7 +498,7 @@ uint64_t Board::getKing(Color colorOfInterest) const
         }
     }
 }
-uint64_t Board::setKing(uint64_t newBitBoard, Color colorOfInterest)
+void Board::setKing(uint64_t newBitBoard, Color colorOfInterest)
 {
     if (colorOfInterest == NO_COLOR)
     {
@@ -479,6 +517,7 @@ uint64_t Board::setKing(uint64_t newBitBoard, Color colorOfInterest)
         }
     }
 }
+
 Piece Board::getPieceAtSquare(Square square) const{
         if ( (blackPawns | whitePawns ) & (1ULL << square) ) return pawn;
         if ( (blackKnights | whiteKnights ) & (1ULL << square) ) return knight;
@@ -633,7 +672,6 @@ void Board::movePiece(Square from, Square to){
             else{
                 currentBoardState.removePiece(colorOfPieceBeingMoved , pieceBeingMoved , from);
                 currentBoardState.addPiece(colorOfPieceBeingMoved , pieceBeingMoved , to);
-
             }
             
         }

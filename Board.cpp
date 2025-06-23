@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "util.h"
 #include <iostream>
 #include <cstdint> //uint64_t
 #include <cstdlib> // for exit()
@@ -63,7 +64,36 @@ Board::Board()
     blackCanKingCastle = false;
     blackCanQueenCastle = false;
 };
+void Board::initializeBoard()
+    {                                       // Initialize the chess board with pieces | LSB = 1a-1d, MSB = 8a-8d
+        whitePawns = 0x000000000000FF00ULL; // every digit = 4 bits (squares on the board). In hexa, F = 1111, so the 2nd row's entirely set to 1 for pawns
+        blackPawns = 0x00FF000000000000ULL; // 00000000 11111111 000000000
+        
+        whiteRooks = 0x0000000000000081ULL;
+        blackRooks = 0x8100000000000000ULL; // 10000001 00000000 000000000 1010 = A
 
+        whiteKnights = 0x0000000000000042ULL; // 01000010
+        blackKnights = 0x4200000000000000ULL;
+
+        whiteBishops = 0x0000000000000024ULL; // (0000)(0000) (0010)(0100)
+        blackBishops = 0x2400000000000000ULL;
+
+        whiteKings = 0x0000000000000010ULL; // 00010000
+        blackKings = 0x1000000000000000ULL; // 10000000
+
+        whiteQueens = 0x0000000000000008ULL;
+        blackQueens = 0x0800000000000000ULL;
+
+        updatePiecesOfSide(white);
+        updatePiecesOfSide(black);
+        updateOccupiedSquares();
+        updateEmptySquares();
+        
+        updateFriendlyEnemy(white);
+        enPassantTargetSquare = NO_SQUARE;
+    
+    };
+    
 // methods to determine what piece is at square
 bool Board::isPiece(Color colorOfInterest, Square square) const
 {
@@ -542,6 +572,10 @@ Color Board::getColorAtSquare(Square square) const {
     }
         
     //will not return because this function will only be called on squares with pieces
+}
+
+Square Board::getEnPassantTargetSquare() const{
+    return enPassantTargetSquare;
 }
 bool Board::operator==(const Board &other) const
 {

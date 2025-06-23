@@ -1567,7 +1567,7 @@ public:
     
     
 
-    bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare) const {
+    bool isSquareInCheck(Square squareOfInterest, Color colorOfSquare) const { //USES MOVEGEN
        
         Color opponentColor = !colorOfSquare;
         uint64_t opponentMoves = MoveGenerator::attackedByPawns(*this, opponentColor) | MoveGenerator::possibleKnightMovesBitBoard(*this, opponentColor) | MoveGenerator::possibleBishopMovesBitBoard(*this, opponentColor) | 
@@ -1576,7 +1576,7 @@ public:
         //std::cout <<"\nCheckpoint D\n";
         return  ( ((1ULL << squareOfInterest) & opponentMoves) != 0); 
     }
-    bool isKingInCheck(Color colorOfKing) const{
+    bool isKingInCheck(Color colorOfKing) const{    //USES MOVEGEN
 
         uint64_t kingLocation = getKing(colorOfKing);
         Color opponentColor = !colorOfKing;

@@ -59,7 +59,7 @@ class Board{
 
     
 
-
+    Square enPassantTargetSquare; //variable that game will interact with
     // 1= white, -1 = black
     bool whiteCastlePrivelege; //tracks over all ability to castle
     bool whiteKingCastleRights; //potential to castle king side
@@ -77,11 +77,15 @@ class Board{
 
 
     public:
+
+    
+
     bool isSet(uint64_t bitboard, Square square) const;
     void set_bit(uint64_t& bitboard, Square square);
     void reset_bit(uint64_t& bitboard, Square square); //different than pop bit, used for rooks/magic
     
     Board();
+    void initializeBoard();
     bool DoesSquareHavePiecePieceOfColor(Piece pieceOfInterest, Color colorOfInterest, Square square) const;
     bool isPiece(Color colorOfInterest, Square square) const;
     bool isPawn(Color colorOfInterest,Square square) const;
@@ -128,6 +132,7 @@ class Board{
     Piece getPieceAtSquare(Square square) const;
     Color getColorAtSquare(Square square) const;
 
+    Square getEnPassantTargetSquare() const;
     bool operator==(const Board& other) const;
     
 

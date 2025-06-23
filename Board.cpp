@@ -1,11 +1,11 @@
 #include "Board.h"
-
 #include <iostream>
 #include <cstdint> //uint64_t
 #include <cstdlib> // for exit()
 //BIT OPERATIONS
-bool Board::isSet(uint64_t bitboard, Square square){
-    if(square < 0 || square >= 64){
+bool Board::isSet(uint64_t bitboard, Square square) const{
+    int squareInt = static_cast<int>(square);
+    if(squareInt < 0 || squareInt >= 64){
         std::cerr << "isSet was passed an invalid square parameter";
         exit(1);
     }
@@ -197,7 +197,7 @@ bool Board::isOccupied(Square square) const
     return ((getOccupiedSquares() & (1ULL << square)) != 0);
 }
 
-// Getter and Setter methods
+// Getter, Setter, Update methods
 uint64_t Board::getOccupiedSquares() const
 {
     return occupiedSquares;
@@ -267,7 +267,6 @@ void Board::setFriendlyPieces(Color colorOfInterest){
         friendlyPieces = getPiecesOfSide(colorOfInterest);
     }
 }
-
 uint64_t Board::getEnemyPieces() const{
     return enemyPieces;
 }
@@ -281,11 +280,11 @@ void Board::setEnemyPieces(Color colorOfInterest){
     }
 
 }
-
 void Board::updateFriendlyEnemy(Color color){
     setFriendlyPieces(color);
     setEnemyPieces(color);
 }
+
 uint64_t Board::getPawns(Color colorOfInterest) const
 {
     if (colorOfInterest == NO_COLOR)
@@ -570,37 +569,43 @@ void Board::addPiece(Color color,Piece piece, Square square){
         exit(1);
     }
             switch(piece){
-                case pawn:
+                case pawn:{
                     //getPawns is constant and set_bit is by reference so buffer variable required
                     uint64_t pawnBitBoard = getPawns(color);
                     set_bit(pawnBitBoard,square);
                     setPawns(pawnBitBoard,color);
                     break;
-                case bishop:
+                }
+                case bishop:{
                     uint64_t bishopBitBoard = getBishops(color);
                     set_bit(bishopBitBoard,square);
                     setBishops(bishopBitBoard,color);
                     break;
-                case knight:
+                }
+                case knight:{
                     uint64_t knightBitBoard = getKnights(color);
                     set_bit(knightBitBoard,square);
                     setKnights(knightBitBoard,color);
                     break;
-                case rook:
+                }
+                case rook:{
                     uint64_t rookBitBoard = getRooks(color);
                     set_bit(rookBitBoard,square);
                     setRooks(rookBitBoard,color);
                     break;
-                case queen:
+                }
+                case queen:{
                     uint64_t queenBitBoard = getQueens(color);
                     set_bit(queenBitBoard,square);
                     setQueens(queenBitBoard,color);
                     break;
-                case king:
+                }
+                case king:{
                     uint64_t kingBitBoard = getKing(color);
                     set_bit(kingBitBoard,square);
                     setKing(kingBitBoard,color);
                     break;
+                }
                 case NO_PIECE:
                 default:
                     break;
@@ -615,37 +620,43 @@ void Board::removePiece(Color color, Piece piece, Square square){ //only differe
         exit(1);
     }
             switch(piece){
-                case pawn:
+                case pawn:{
                     //getPawns is constant and set_bit is by reference so buffer variable required
                     uint64_t pawnBitBoard = getPawns(color);
                     reset_bit(pawnBitBoard,square);
                     setPawns(pawnBitBoard,color);
+                }
                     break;
-                case bishop:
+                case bishop:{
                     uint64_t bishopBitBoard = getBishops(color);
                     reset_bit(bishopBitBoard,square);
                     setBishops(bishopBitBoard,color);
                     break;
-                case knight:
+                }
+                case knight:{
                     uint64_t knightBitBoard = getKnights(color);
                     reset_bit(knightBitBoard,square);
                     setKnights(knightBitBoard,color);
                     break;
-                case rook:
+                }
+                case rook:{
                     uint64_t rookBitBoard = getRooks(color);
                     reset_bit(rookBitBoard,square);
                     setRooks(rookBitBoard,color);
                     break;
-                case queen:
+                }
+                case queen:{
                     uint64_t queenBitBoard = getQueens(color);
                     reset_bit(queenBitBoard,square);
                     setQueens(queenBitBoard,color);
                     break;
-                case king:
+                }
+                case king:{
                     uint64_t kingBitBoard = getKing(color);
                     reset_bit(kingBitBoard,square);
                     setKing(kingBitBoard,color);
                     break;
+                }
                 case NO_PIECE:
                 default:
                     break;
@@ -676,4 +687,42 @@ void Board::movePiece(Square from, Square to){
             
         }
         
+}
+
+// PRINTING/DISPLAYING BOARD INFORMATION
+
+std::string Board::getPieceSymbol(Piece piece, Color color) const {
+    switch (piece) {
+        case king:   return color == black ? "♔ " : "♚ ";
+        case queen:  return color == black ? "♕ " : "♛ ";
+        case rook:   return color == black ? "♖ " : "♜ ";
+        case bishop: return color == black ? "♗ " : "♝ ";
+        case knight: return color == black ? "♘ " : "♞ ";
+        case pawn:   return color == black ? "♙ " : "♟ ";
+        default:     return "·";  // or " " or "□"
     }
+}
+
+void Board::displayBoardPolished() const{
+    std::cout << "  \n   +------------------------+" << std::endl;
+    for (int rank = 7; rank >= 0; --rank) {
+        std::cout << rank + 1 << " | ";
+        for (int file = 0; file < 8; ++file) {
+            Square square = Square ( rank * 8 + file );
+            if (isSet(occupiedSquares,square)){
+                Piece piece = getPieceAtSquare(square);
+                Color color = getColorAtSquare(square);
+                std::string symbol = getPieceSymbol(piece, color);
+                std::cout << symbol << " ";
+            }
+            else{
+                std::cout << ".  ";
+            }
+            
+            
+        }
+        std::cout << "|" << std::endl;
+    }
+    std::cout << "  +------------------------+" << std::endl;
+    std::cout << "    a  b  c  d  e  f  g  h" << std::endl;
+}

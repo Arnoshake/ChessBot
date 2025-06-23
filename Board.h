@@ -1,4 +1,5 @@
 #include <cstdint> //uint64_t
+#include <string> // getPieceSymbol()
 enum Color{
     white, black, NO_COLOR
 };
@@ -24,6 +25,12 @@ enum Piece {
     pawn, bishop, knight, rook, queen, king, NO_PIECE
 };
 class Board{
+    /*
+        BOARD IS A DATA CONTAINER
+        It holds locations, access methods, and barebones bit operations for moving pieces
+
+        Board deals entirely bitboards
+    */
     private:
     // White pieces
     uint64_t whitePawns;
@@ -70,7 +77,7 @@ class Board{
 
 
     public:
-    bool isSet(uint64_t bitboard, Square square);
+    bool isSet(uint64_t bitboard, Square square) const;
     void set_bit(uint64_t& bitboard, Square square);
     void reset_bit(uint64_t& bitboard, Square square); //different than pop bit, used for rooks/magic
     
@@ -98,7 +105,7 @@ class Board{
     void setFriendlyPieces(Color colorOfInterest);
     uint64_t getEnemyPieces() const;
     void setEnemyPieces(Color colorOfInterest);
-    void Board::updateFriendlyEnemy(Color color);
+    void updateFriendlyEnemy(Color color);
 
     uint64_t getPawns(Color colorOfInterest) const;
     void setPawns(uint64_t newBitBoard, Color colorOfInterest);
@@ -119,12 +126,15 @@ class Board{
     void setKing(uint64_t newBitBoard, Color colorOfInterest);
 
     Piece getPieceAtSquare(Square square) const;
-    Color Board::getColorAtSquare(Square square) const;
+    Color getColorAtSquare(Square square) const;
 
     bool operator==(const Board& other) const;
     
 
     void addPiece(Color color,Piece piece, Square square);
     void removePiece(Color color, Piece piece, Square square);
-    void Board::movePiece(Square from, Square to);
+    void movePiece(Square from, Square to);
+
+    std::string getPieceSymbol(Piece piece, Color color) const;
+    void displayBoardPolished() const;
 };

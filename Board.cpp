@@ -577,6 +577,9 @@ Color Board::getColorAtSquare(Square square) const {
 Square Board::getEnPassantTargetSquare() const{
     return enPassantTargetSquare;
 }
+void Board::setEnPassantTargetSquare(Square newEnPassantSquare){
+    enPassantTargetSquare = newEnPassantSquare;
+}
 bool Board::operator==(const Board &other) const
 {
     return occupiedSquares == other.occupiedSquares &&

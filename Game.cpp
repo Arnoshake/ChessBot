@@ -1,5 +1,7 @@
 #include "Game.h"
+#include "util.h"
 #include <cctype> // Required for std::tolower()
+#include "MoveInformation.h"
 Game::Game(){
         gameBoard.initializeBoard();
         playerTakingTurnColor = white;
@@ -44,9 +46,10 @@ void Game::takeGameHalfTurn(Color turn){
         if (turn == white) std::cout << "W.";
         else if (turn == black) std::cout << "B.";
         
-        std::vector<MoveInformation> possibleLegalMoves = MoveGenerator::generateLegalMoves(getBoard(), turn);
-        identifyCheckMateMoves(possibleLegalMoves,getBoard() );
-        updateNotationForMoveList(possibleLegalMoves);
+        // FIGURE OUT
+        // std::vector<MoveInformation> possibleLegalMoves = MoveGenerator::generateLegalMoves(getReadOnlyBoard(), turn);
+        // identifyCheckMateMoves(possibleLegalMoves,getReadOnlyBoard() );
+        // updateNotationForMoveList(possibleLegalMoves);
         MoveInformation matchingMove; //initialized inside loop
         while (true) {
             std::string userInput;
@@ -55,26 +58,26 @@ void Game::takeGameHalfTurn(Color turn){
                 std::cin >> userInput;
                 // createMoveFromString(getBoard(), turn, userInput).printMoveInfo();
                 // possibleLegalMoves.at(33).printMoveInfo();
-                if (std::tolower(userInput) == "quit" || std::tolower(userInput) == "q" ){
+                if (userInput == "quit" || userInput == "q" || userInput == "Q" || userInput == "Quit" ){
                 std::cout << "\nQuitting program...\n";
                 std::exit(0);
                 }
                 else if (userInput.length() == 1){
                     //printMoveList(possibleLegalMoves);
-                std::cout << "\nPlease enter a valid move.\n";
+                std::cout << "\nNo legal move is a single character. Please enter a valid move.\n";
                 }
                 else{
                     break;
                 }
             }   
-            // move is not too small
-            MoveInformation userInputtedMove = MoveParser::createMoveFromString(getBoard(),turn,userInput);
+            // move is not too small (seg fault) or a special command
+            MoveInformation userInputtedMove = MoveParser::createMoveFromString(getReadOnlyBoard(),turn,userInput);
             userInputtedMove.playerColor = turn;
             //userInputtedMove.printMoveInfo();
 
 
             try {
-                matchingMove = getMatchingMove(getBoard(),possibleLegalMoves, userInputtedMove);
+                matchingMove = getMatchingMove(getReadOnlyBoard(),possibleLegalMoves, userInputtedMove);
                 //matchingMove.printMoveInfo();
                 break; // exit the loop since we found a valid move
             }
@@ -88,25 +91,25 @@ void Game::takeGameHalfTurn(Color turn){
 
         matchingMove.printMoveInfo();
         
-        getBoard().makeMove(matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
+        getGameBoard().makeMove(matchingMove,1);                  //make move function does not discern legality, all illegal moves should be filtered out vefore this
         
-        if (matchingMove.pieceType == pawn && abs(matchingMove.toSquare - matchingMove.fromSquare) == 16) {
-        getBoard().enPassantTargetSquare = ((matchingMove.toSquare + matchingMove.fromSquare) / 2) ;
+        if (matchingMove.pieceType == pawn && abs(static_cast<int>(matchingMove.toSquare) - static_cast<int>(matchingMove.fromSquare) ) == 16) {
+        getGameBoard().setEnPassantTargetSquare( Square( ( static_cast<int>(matchingMove.toSquare) + static_cast<int>(matchingMove.fromSquare) ) / 2) );
         //std::cout << "Setting enPassantTargetSquare to: " << matchingMove.toSquare  << " + "<<matchingMove.fromSquare<< " -->" <<getBoard().enPassantTargetSquare << "\n";
 
     }
         else{
-            getBoard().enPassantTargetSquare = -1;
+            getGameBoard().setEnPassantTargetSquare(NO_SQUARE);
         }
-        getBoard().updateCastlingRights(matchingMove,turn);
+        getGameBoard().updateCastlingRights(matchingMove,turn);
 
-        Board newBoard = getBoard();
+        
+        Board newBoard = getCopyBoard();
         boardStates.push_back(newBoard); //adds the new (post-move) board to the game history
         masterMoveList.push_back(matchingMove); //adds the move to bridge between board states
-        getColorOfPlayerTakingTurn() = !getColorOfPlayerTakingTurn(); //inverse itself
-        // printBitBoard(getBoard().getPawns(white));
-        // printBitBoard(getBoard().getPawns(black));
-        getBoard().displayBoardPolished();
+        setColorOfPlayerTakingTurn( !getColorOfPlayerTakingTurn() ); //inverse itself
+    
+        getReadOnlyBoard().displayBoardPolished();
     }
 
 bool isCheckMate(Color colorOfKing, Board boardState){

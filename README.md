@@ -1,30 +1,48 @@
-This will be replaced upon completion of the project. As of right now, it will exist as an outline of work remaining.
+# ChessBot (Paused Development Branch)
 
-This week (4/8-4/13): 
-- possible moves generation for pieces and bitboards
-- Legal Moves generation
-- takeTurn
+## About This Project
 
-Next week (4/14-4/21):
-- Research on bot programming methods and requirements (more specifics, have a general outline currently)
-- evaluation
-- Board storing & best move
-- mini-max & AB pruning
+ChessBot is a personal project aimed at building a fully playable chess engine in C++ using bitboards, object-oriented design, and efficient move generation techniques. The project includes core classes like `Board`, `Game`, `MoveInformation`, `MoveGenerator`, and `MoveParser`, with a focus on both clean architecture and performance.
 
+## Project Paused — Why?
 
-4/8/25:
-Worked on masking methods
+After rewriting and reorganizing the original project to improve clarity and remove tight coupling between classes, I hit a wall.
 
-Need to:
-- figure out how data will be passed to methods --> down the line... can address this once logic already working at a change in passing is a performance detail, not a logic detail
-- how will pieceType be figured out for each call --> same note as before
-- pawns
-- look up tables for movements (done for rooks, bishops, implied for queens (replace w a real lookup table?) ) -- need for knights, pawns, kings
-  
-4/9/25
-- completed knight move generator
-    - upscaled it to apply to bitboard instead of square
-- Now have completed move generation for rooks, bishops, queens, Knights, and King
+While I successfully improved structure and introduced better coding practices, I found myself spending **more time fixing structural and linking errors** than working on actual chess logic. The project turned into a cleanup job rather than a learning or creative experience.
 
-- got working pawn movement for push, double push, and captures
-    - Need to work on en passant and promotions 
+My main goal with this project was to have something to code outside of class, and I succeeded at this. This chess project has been the beginning to a journey of improvement and hard work as a coding professional.
+
+Rather than continue to grind against code debt, I've decided to **pause development** on this branch (`fresh-start`). This doesn't mean the project is abandoned — just deferred until I have:
+- A cleaner design approach
+- More time to refactor from scratch
+- Possibly external help or mentorship to resolve architectural blockers
+
+## Branches
+
+- `main` — Original version where I hit the wall
+- `fresh-start` — Refactor branch attempting to restructure
+- `mostly-working-game` — Peak functionality of a base, 2 player game
+
+## What I Learned
+- Planning ahead and the importance of a strong understanding of the project infrastructure
+- The importance of clean class boundaries and modular design
+- How circular dependencies in C++ can break compilation
+- Bitboard representations and chess move encoding
+- Why starting small and testing early is essential --> The value of debugger infrastructure
+
+## Future Plans
+
+I plan to return to this project after a break or after gaining more experience. In the meantime, I may:
+- Start smaller scoped games or visualizers
+- Re-implement core ideas in Python or JavaScript
+- Use this experience to fuel better project planning
+
+## Current Status
+
+**Paused** as of 6/27
+`fresh-start` branch preserved for future resumption  
+Last major focus: Decoupling `MoveGenerator` and fixing interdependencies
+
+---
+
+Thanks for checking out this project. If you're a fellow developer who sees potential or wants to collaborate, feel free to reach out.

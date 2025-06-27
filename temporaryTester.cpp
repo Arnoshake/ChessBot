@@ -8,6 +8,7 @@
 #include <fstream> //included to write to output file
 #include <vector>
 
+// g++ -std=c++11 temporaryTester.cpp --> ./a.out
 int main() {
     init_sliders_attacks(0);
     init_sliders_attacks(1);

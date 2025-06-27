@@ -120,4 +120,6 @@ class Board{
 
     std::string getPieceSymbol(Piece piece, Color color) const;
     void displayBoardPolished() const;
+
+    bool isKingInCheck(Color colorOfKing) const;
 };

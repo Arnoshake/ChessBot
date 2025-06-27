@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cstdint> //uint64_t
 #include <cstdlib> // for exit()
+
+#include "MoveGenerator.h"
 //BIT OPERATIONS
 bool Board::isSet(uint64_t bitboard, Square square) const{
     int squareInt = static_cast<int>(square);
@@ -762,4 +764,14 @@ void Board::displayBoardPolished() const{
     }
     std::cout << "  +------------------------+" << std::endl;
     std::cout << "    a  b  c  d  e  f  g  h" << std::endl;
+}
+
+bool Board::isKingInCheck(Color colorOfKing) const{    //USES MOVEGEN
+
+        uint64_t kingLocation = getKing(colorOfKing);
+        Color opponentColor = !colorOfKing;
+        uint64_t opponentMoves = MoveGenerator::attackedByPawns(*this, opponentColor) | MoveGenerator::possibleKnightMovesBitBoard(*this, opponentColor) | MoveGenerator::possibleBishopMovesBitBoard(*this, opponentColor) | 
+                                    MoveGenerator::possibleRookMovesBitBoard(*this, opponentColor) | MoveGenerator::possibleQueenMovesBitBoard(*this, opponentColor);
+       
+        return  ( (kingLocation & opponentMoves) != 0); //if there is overlap (>0) return true
 }

@@ -33,7 +33,7 @@ public:
 
     Color getColorOfPlayerTakingTurn() const;
     void setColorOfPlayerTakingTurn(Color nextPlayerColor);
-    
+
 
     //GAMEPLAY LOOP
 

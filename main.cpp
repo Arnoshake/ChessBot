@@ -1,5 +1,5 @@
 #include "Board.cpp"
-
+#include "util.h"
 int main(){
     Board testBoard = Board();
     testBoard.addPiece(white,pawn,a1);

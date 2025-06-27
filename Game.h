@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Board.cpp"
 #include <vector>
 enum gameEndingCondition{

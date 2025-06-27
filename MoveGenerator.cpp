@@ -155,7 +155,7 @@ public:
     };
     // bishop rellevant occupancy bits
 
-    static const uint64_t getRookMask(int square){
+    const uint64_t getRookMask(int square){
 
         int targetRank = square / 8; //rows
         int targetFile = square % 8; //columns
@@ -182,7 +182,7 @@ public:
         
             return rookAttacks;
     }
-    static const uint64_t getBishopMask(int square){
+    const uint64_t getBishopMask(int square){
         int targetRank = square / 8; //rows
         int targetFile = square % 8; //columns
         uint64_t bishopAttacks = 0ULL;
@@ -210,7 +210,7 @@ public:
         5, 5, 5, 5, 5, 5, 5, 5,
         6, 5, 5, 5, 5, 5, 5, 6
     };
-    static const uint64_t get_bishop_attacks(int square, uint64_t occupancy) {
+    const uint64_t get_bishop_attacks(int square, uint64_t occupancy) {
         
         // calculate magic index
         occupancy &= bishop_masks[square];
@@ -221,7 +221,7 @@ public:
         return bishop_attacks[square][occupancy];
         
     }
-    static const uint64_t get_rook_attacks(int square, uint64_t occupancy) {
+    const uint64_t get_rook_attacks(int square, uint64_t occupancy) {
         
         // calculate magic index
         occupancy &= rook_masks[square];
@@ -231,7 +231,7 @@ public:
         // return rellevant attacks
         return rook_attacks[square][occupancy];
     }
-    static const uint64_t bishop_attacks_on_the_fly(int square, uint64_t block)
+    const uint64_t bishop_attacks_on_the_fly(int square, uint64_t block)
 
     {
         // attack bitboard
@@ -272,7 +272,7 @@ public:
         // return attack map for bishop on a given square
         return attacks;
     }
-    static const uint64_t rook_attacks_on_the_fly(int square, uint64_t block)
+    const uint64_t rook_attacks_on_the_fly(int square, uint64_t block)
     {
         // attacks bitboard
         uint64_t attacks = 0ULL;
@@ -313,20 +313,20 @@ public:
         return attacks;
     }
     #define get_bit(bitboard, square) (bitboard & (1ULL << square))
-    static void set_bit(uint64_t& bitboard, int square){
+    void set_bit(uint64_t& bitboard, int square){
         if(square < 0 || square >= 64) throw std::out_of_range("Invalid square"); 
         (bitboard |= (1ULL << square));
     }
     // void pop_bit(uint64_t& bitboard, int square){
     //     get_bit(bitboard, square) ? (bitboard ^= (1ULL << square)) : 0; //not my code... provided in Rook magic stuff
     // }
-    static void pop_bit(uint64_t& bitboard, int square){ //AI GEMINI... ternary leads to it acting as a bit toggle
+    void pop_bit(uint64_t& bitboard, int square){ //AI GEMINI... ternary leads to it acting as a bit toggle
         if(square < 0 || square >= 64) throw std::out_of_range("Invalid square");
         if (get_bit(bitboard, square)) {
             bitboard ^= (1ULL << square);
         }
     }
-    static int count_bits(uint64_t bitboard) {
+    int count_bits(uint64_t bitboard) {
         // bit count
         int count = 0;
         
@@ -343,7 +343,7 @@ public:
         // return bit count
         return count;
     }
-    static int get_ls1b_index(uint64_t bitboard) {
+    int get_ls1b_index(uint64_t bitboard) {
         // make sure bitboard is not empty
         if (bitboard != 0)
             // convert trailing zeros before LS1B to ones and count them
@@ -354,7 +354,7 @@ public:
             // return illegal index
             return -1;
     }
-    static uint64_t set_occupancy(int index, int bits_in_mask, uint64_t attack_mask)
+    uint64_t set_occupancy(int index, int bits_in_mask, uint64_t attack_mask)
     {
         // occupancy map
         uint64_t occupancy = 0ULL;
@@ -377,7 +377,7 @@ public:
         // return occupancy map
         return occupancy;
     }
-    static void init_sliders_attacks(int is_bishop)
+    void init_sliders_attacks(int is_bishop)
     {
         // loop over 64 board squares
         for (int square = 0; square < 64; square++)

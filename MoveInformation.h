@@ -1,3 +1,6 @@
+#pragma once
+#include "util.h"
+#include <string>
 class MoveInformation{
     public:
         std::string chessNotation;

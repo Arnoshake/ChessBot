@@ -1,5 +1,4 @@
 #include "MoveInformation.h"
-#include "util.h"
 MoveInformation::MoveInformation()
 { // chatGPT fixed                                 //
     isCheck = false;
